@@ -16,3 +16,6 @@ __pycache__/
 
 # VS Code personal settings
 .vscode/
+
+# MediaPipe model
+hand_landmarker.task
