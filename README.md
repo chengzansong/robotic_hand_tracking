@@ -1,40 +1,33 @@
-# Robotic Hand Tracking
+# Soft robotic hand
 
-Real-time hand and finger joint tracking using OpenCV and MediaPipe, developed as the control interface for an Ecoflex-based pneumatic soft robotic hand.
+Control pipeline for an Ecoflex pneumatic soft hand. Three modules share this repo:
 
-## Features
+| Module | Path | State |
+| --- | --- | --- |
+| Perception | [perception/](perception/) | Imported webcam tracker (OpenCV + MediaPipe) |
+| Pneumatics | [pneumatics/](pneumatics/) | Command mapping, not implemented |
+| Simulation | [simulation/](simulation/) | Physical playback, not implemented |
 
-- Real-time webcam hand tracking
-- Detection and visualization of 21 hand landmarks
-- Measurement of finger joint angles
-- Normalized finger curl values from 0 to 1
+The tracker used to live at the repository root. Its program and original README moved with history into `perception/`. Root [requirements.txt](requirements.txt) is still `opencv-python`, `mediapipe`, and `numpy`.
 
-## Installation
+## Run the tracker
 
-1. Clone the repository.
-2. Create and activate a Python virtual environment.
-3. Install the dependencies:
+From the repository root:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+curl -L -o perception/hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+python perception/main.py
+```
 
-4. Download the MediaPipe Hand Landmarker model:
+Press `Q` to close the webcam window. The model file is gitignored and must sit beside `perception/main.py`. The original write-up is [perception/README.md](perception/README.md). Its shell commands assumed the script was at the root; use the commands above.
 
-   ```bash
-   curl -L -o hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
-   ```
+## For agents
 
-5. Run the program:
+Start at [AGENTS.md](AGENTS.md). Plans live in [plans/](plans/). Shared notes live in [context/](context/).
 
-   ```bash
-   python main.py
-   ```
+## Git
 
-## Controls
-
-Press `Q` to close the webcam window.
-
-## Future Development
-
-Integrate finger curl measurements with an ESP32-based pneumatic controller to operate individually actuated Ecoflex robotic fingers.
+Local branch `dev/hand-pipeline`, remote `https://github.com/chengzansong/robotic_hand_tracking.git`, no upstream. Publishing and merging wait for an explicit request. See [context/git-workflow.md](context/git-workflow.md).
