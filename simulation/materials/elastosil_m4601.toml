@@ -1,0 +1,57 @@
+# Wacker Elastosil M4601 A/B, the classic PneuNet material from the Whitesides
+# group papers. Included as a reference point. Its one accessible fit is weak,
+# so confidence is low.
+#
+# Accessible fits. Wang, Ge, Gu 2018 (a PneuNet paper) give a 2-term Yeoh fit.
+# Polygerinos et al. 2015 (IEEE T-RO) used a Yeoh model for M4601, and the Soft
+# Robotics Toolkit is reported to list a neo-Hookean value. Neither page could be
+# retrieved, so none of their numbers are used. Marechal et al. 2021 did not
+# test M4601.
+#
+# No 100% modulus is published for M4601, so the usual lam = 2 datasheet check
+# is not possible. A rough plausibility check from Shore A 28, using Gent's
+# empirical relation E = 0.0981 (56 + 7.62336 S) / (0.137505 (254 - 2.54 S)) MPa,
+# gives E ~ 1.05 MPa, mu ~ 350 kPa and a neo-Hookean P(lam = 2) ~ 613 kPa. The
+# Yeoh fit below gives mu0 = 250 kPa and P(lam = 2) = 543 kPa, consistent within
+# about 30%. Gent's relation is a coarse correlation, not a measurement.
+id = "elastosil_m4601"
+name = "Wacker Elastosil M4601 A/B"
+family = "elastosil"
+density_kg_m3 = 1130
+
+[datasheet]
+shore_hardness = "A28"
+elongation_at_break_pct = 700
+tensile_strength_kPa = 6500          # 6.5 N/mm^2
+source = "Wacker Elastosil M 4601 A/B technical data as reproduced by siliconesandmore.com (Shore A 28, tensile strength 6.5 N/mm^2, elongation 700%, tear strength > 30 N/mm, density 1.13 g/cm^3, mix 9A:1B by weight, pot life 90 min). The official Wacker PDF could not be retrieved; GlobalSpec's listing also gives 6500 kPa, 700% and Shore A ~28. No 100% modulus is published"
+url = "https://www.wacker.com/h/en-us/silicone-rubber/room-temperature-curing-silicone-rubber-rtv-2/elastosil-m-4601-ab/p/000018458"
+
+[purchase]
+kit_size = "1 kg set, parts A and B (9:1)"
+kit_mass_kg = 1.0
+vendor = "siliconesandmore.com (Netherlands)"
+url = "https://www.siliconesandmore.com/en/wacker-m4601.html"
+checked = "2026-10-19"
+notes = '''No USD price was found, so price_usd and price_per_kg_usd are left out. siliconesandmore.com lists a 1 kg set at EUR 39.95 including 21% VAT (EUR 33.02 excluding VAT), 5 kg at EUR 199.00 and 25 kg at EUR 932.00. It ships from the Netherlands, and the page suggests orders outside the Benelux and Germany go by quotation. TME lists a 1 kg A+B kit (908-53115) but marks it unavailable for sale in the US. Wacker sells mainly through industrial distributors, and US availability in small quantities is unclear; ask Wacker Chemical Corp. (US) or a distributor such as H.M. Royal for a quote. Lead time and shipping make it the least convenient option for a student team. Note the 9:1 mix ratio by weight, which needs a scale, unlike Smooth-On's 1:1.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 125.0
+c20_kPa = 7.5
+c30_kPa = 0.0
+test = "uniaxial tension, ASTM D638 specimens; nominal stress-strain data fitted in ABAQUS; strain measurement method not stated"
+stretch_range = [1.0, 7.0]
+source = "Wang, Ge, Gu 2018, Sensors and Actuators A 271:131-138, Fig. 2 caption and Sec. 3"
+doi = "10.1016/j.sna.2018.01.018"
+confidence = "low"
+notes = '''Conversion. The paper gives C10 = 0.125 and C20 = 0.0075 for an ABAQUS Yeoh model, W = C10 (I1-3) + C20 (I1-3)^2, which is the card's convention. No units are stated. MPa is assumed (the ABAQUS mm-N-MPa unit set), which gives C10 = 125 kPa, C20 = 7.5 kPa and C30 = 0. Any other unit gives an implausible stiffness for a Shore A 28 rubber.
+
+Check at lam = 2: P = 2(lam - lam^-2)(C10 + 2 C20 (I1-3)) = 3.5 x (125 + 2 x 7.5 x 2) = 542.5 kPa. There is no datasheet 100% modulus to compare against; see the Shore A check at the top of this file.
+
+Equibiaxial nominal stress at lam = 2 is 791 kPa.
+
+Reasons for low confidence:
+1. The authors state that the raw ABAQUS fit caused excessive deformation and convergence problems, so an "extra fitting process" was used. The final coefficients are partly hand-tuned.
+2. The units are unstated.
+3. The fit range is not stated explicitly; the authors say the model matches their data from 0 to 600% strain.
+4. The fit shows discrepancies at large tensile and at compressive strains (their Fig. 2).'''

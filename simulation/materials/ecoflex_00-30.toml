@@ -1,0 +1,93 @@
+# Smooth-On Ecoflex 00-30. Candidate for the finger body.
+#
+# Fit choice. The default is the Liao et al. 2020 Yeoh fit, the only published
+# coefficient set found that is both accessible and convertible exactly into the
+# canonical convention. No accessible published Ogden set passed the checks, so
+# the Ogden fit below is this library's own refit of the Marechal et al. 2021 raw
+# data and is labelled as such.
+#
+# Marechal et al. 2021 Table III is not used, for these reasons:
+#   1. Their Ogden fit uses sigma = sum 2 mu_p (lam^(alpha_p-1) - lam^(-alpha_p/2-1))
+#      against true stress (Table II and their published code). That is not the
+#      Cauchy stress of an Ogden solid in any standard convention, because the
+#      exponents are those of nominal stress. It cannot be converted.
+#   2. Their Mooney-Rivlin fit has 3 terms (C10, C01, C20) with C01 < 0, so
+#      mu0 = 2 (C10 + C01) = 2 (18.0 - 46.9) = -58 kPa, which is unstable.
+#   3. Their Yeoh C1 = 0.100 MPa equals the solver's initial guess. It implies
+#      mu0 = 200 kPa and P(lam = 2) = 520 kPa, 7.5x the datasheet.
+#   4. Their neo-Hookean uses W = mu (I1 - 3), so the canonical value would be
+#      mu = 2 x 32.45 = 64.9 kPa, fitted out to rupture.
+#
+# Janardhana et al. 2025 (Materials 18:3037) Yeoh (C1 = 3.3 kPa, C3 = 0.0117 kPa,
+# nu = 0.4) is also excluded. It gives P(lam = 2) = 12 kPa, 5.7x below the
+# datasheet, and nu = 0.4 is not near-incompressible.
+id = "ecoflex_00-30"
+name = "Smooth-On Ecoflex 00-30"
+family = "ecoflex"
+density_kg_m3 = 1070
+
+[datasheet]
+shore_hardness = "00-30"
+modulus_100_kPa = 68.9               # 10 psi
+elongation_at_break_pct = 900
+tensile_strength_kPa = 1379          # 200 psi
+source = "Smooth-On Ecoflex Series technical bulletin. Values after 7 days at 23 C. Specific gravity 1.07, pot life 45 min, cure 4 h, mix 1A:1B"
+url = "https://www.smooth-on.com/tb/files/ECOFLEX_SERIES_TB.pdf"
+
+[purchase]
+kit_size = "Trial Unit, 2 lb (0.91 kg), parts A and B"
+kit_mass_kg = 0.907
+price_usd = 32.99
+price_per_kg_usd = 36.37
+vendor = "Smooth-On store"
+url = "https://shop.smooth-on.com/ecoflex-00-30"
+checked = "2026-10-19"
+notes = '''Reynolds Advanced Materials (reynoldsam.com/product/ecoflex-00-30) lists identical prices. Blick (dickblick.com/products/smooth-on-ecoflex-00-30-silicone) charges $38.10 for 2 lb and $244.81 for a gallon. A 400 mL cartridge (1 lb) costs $32.54, but it needs a dispensing gun and static mixers, so it costs more per kg. Gallon Unit (16 lb, 7.26 kg): $204.05, or $28.12/kg. 5 gallon unit at Reynolds: $841.75. Prices exclude shipping and tax, which were not checked.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 12.58
+c20_kPa = 0.5759
+c30_kPa = 0.0
+test = "uniaxial tension, first loading of virgin rectangular strips 50 x 5 x 1 mm, 0.1 /s to 400% strain, room temperature; strain from crosshead, no extensometer reported"
+stretch_range = [1.0, 5.0]
+source = "Liao, Hossain, Yao 2020, Mechanics of Materials 144:103366, Table 2 (accepted pre-proof, Swansea Cronfa record 53571)"
+doi = "10.1016/j.mechmat.2020.103366"
+confidence = "medium"
+notes = '''Conversion. Liao et al. fit one Shore-dependent model to 00-10, 00-30 and 00-50 together, and held out 00-20 and 00-35 for validation. On first loading the softening variable is 1, and the energy is W = (mu/2) X_eq (I1-3) + c1 X_ov (I1-3) + c2 X_ov^2 (I1-3)^2, with s = H/10 - 1, X_eq = 1 + g1eq s, X_ov = 1 + g1ov s + g2ov s^2. This is exactly a Yeoh model with C10 = mu X_eq/2 + c1 X_ov, C20 = c2 X_ov^2, C30 = 0, in the same W = sum Ci0 (I1-3)^i convention as the card.
+
+Table 2 values: mu = 1.123e-2 MPa, g1eq = 0.6202, c1 = 2.220e-14 MPa (effectively 0), c2 = 2.810e-4 MPa, g1ov = 0.1788, g2ov = 0.01851. The table has no g2eq or c3, so both are taken as 0.
+
+For 00-30, s = 2, so X_eq = 2.2404 and X_ov = 1.43164. Then C10 = 11.23 x 2.2404 / 2 = 12.58 kPa and C20 = 0.281 x 1.43164^2 = 0.5759 kPa, which gives mu0 = 25.2 kPa.
+
+Check at lam = 2, where I1-3 = 2: P = 2(lam - lam^-2)(C10 + 2 C20 x 2) = 3.5 x (12.58 + 2.304) = 52.1 kPa. The datasheet 100% modulus is 68.9 kPa, a ratio of 0.76, within 2x. Equibiaxial nominal stress at lam = 2 from this fit is 72.5 kPa.
+
+Caveats. The fit is to total (rate-dependent) stress at 0.1 /s on virgin material. Ecoflex softens noticeably after its first stretch (Mullins effect), so a cycled finger will be softer than this curve. The values come from the accepted pre-proof; check them against the published version if you have access.'''
+
+[[fits]]
+model = "ogden"
+mu_kPa = [14.55]
+alpha = [2.34]
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328, file Tensile-Tests-Data/Ecoflex 00-30.csv). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "low"
+notes = '''Method. The fit is canonical: nominal P = sum (2 mu_i/alpha_i)(lam^(alpha_i-1) - lam^(-alpha_i/2-1)), least squares on engineering stress, resampled to 150 points uniform in lam from 1.02 to 4.0, weighted by 1/(P + 0.1 Pmax). mu_i >= 0 is enforced, so every term of W = 2 mu_i/alpha_i^2 (...) stays positive in all deformation modes. 2- and 3-term fits under that constraint were no better than 1 term.
+
+Error vs data: +12% at lam = 1.1, +6% at 1.25, -4% at 1.5, -3% at 2, +1% at 3, -1% at 4.
+
+Check at lam = 2: P = (2 x 14.55 / 2.34)(2^1.34 - 2^-2.17) = 28.7 kPa. The data give 29.7 kPa and the datasheet 68.9 kPa, a ratio of 0.42. FLAG: this disagrees with the datasheet by more than 2x. The raw data reach 1600% strain against 900% on the datasheet, which suggests crosshead strain overstates specimen strain (dumbbell shoulders, grip slip), so this curve is probably too soft. Use it as a soft bound in sensitivity studies, not as the design value.
+
+Equibiaxial nominal stress at lam = 2 is 31.2 kPa.'''
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 39.40
+test = "none, manufacturer 100% modulus only"
+stretch_range = [1.0, 2.0]
+source = "Smooth-On Ecoflex Series technical bulletin, 100% modulus 10 psi = 68.9 kPa"
+confidence = "low"
+notes = '''Datasheet estimate. For incompressible neo-Hookean uniaxial tension, nominal P = mu (lam - lam^-2), so at lam = 2, P = 1.75 mu and mu = 68.9 / 1.75 = 39.4 kPa.
+
+The 100% modulus is a single secant point, quoted to the nearest psi, so this ignores the curve shape. Ecoflex is softer at small strain than this μ suggests: Liao μ0 is 25.2 kPa. Use this fit only to compare grades on a common basis or to bound sensitivity.'''

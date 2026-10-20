@@ -1,0 +1,32 @@
+# Mesh convergence (C): Ecoflex 00-30 (fit 0, Yeoh) at a moderate load with
+# contact, tuned solver, half model. Only size_mm / wall_size_mm differ
+# between tune_mesh_A, _B, and _C.
+name = "tune_mesh_C"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0
+
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+
+[mesh]
+size_mm = 2.5
+wall_size_mm = 0.8
+wall_distance_mm = 2.0
+symmetry = "half_y"
+
+[load]
+case = "free"
+levels_kPa = [0.5, 1.0]            # finest mesh: to 1 kPa only, so it fits the 20 min rule
+
+[contact]
+enabled = true
+
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false

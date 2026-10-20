@@ -1,0 +1,25 @@
+# Thin-wall mesh check: pn_base4_wall0p75 (0.75 mm chamber walls), Ecoflex
+# 00-30 fit 0, 1 kPa, contact on, tuned solver, half model. Global size 4 mm;
+# cavity-wall size 0.5 mm, i.e. about 1.5 quadratic element(s) through the wall.
+# Pair: tune_thin_w1e (0.75 mm) vs tune_thin_w1p5e (0.5 mm).
+name = "tune_thin_w1p5e"
+design = "pn_base4_wall0p75"
+backend = "febio"
+bulk_to_shear = 100.0
+
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+
+[mesh]
+size_mm = 4.0
+wall_size_mm = 0.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+
+[load]
+case = "free"
+levels_kPa = [1.0]
+
+[contact]
+enabled = true

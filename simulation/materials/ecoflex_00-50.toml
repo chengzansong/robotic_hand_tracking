@@ -1,0 +1,72 @@
+# Smooth-On Ecoflex 00-50. Candidate for the finger body (stiffest Ecoflex grade).
+#
+# Fit choice. The default is the Liao et al. 2020 Yeoh fit, converted exactly.
+# The Ogden fit is this library's refit of the Marechal et al. 2021 raw data.
+# Marechal Table III is not used: its Ogden stress formula is non-standard and
+# cannot be converted, its Mooney-Rivlin fit gives mu0 = 2(35.3 - 105) = -139 kPa,
+# its Yeoh C1 = 0.1 MPa is the solver's initial guess, and its neo-Hookean uses
+# W = mu (I1 - 3). See ecoflex_00-30.toml for details.
+id = "ecoflex_00-50"
+name = "Smooth-On Ecoflex 00-50"
+family = "ecoflex"
+density_kg_m3 = 1070
+
+[datasheet]
+shore_hardness = "00-50"
+modulus_100_kPa = 82.7               # 12 psi
+elongation_at_break_pct = 980
+tensile_strength_kPa = 2172          # 315 psi
+source = "Smooth-On Ecoflex Series technical bulletin. Values after 7 days at 23 C. Specific gravity 1.07, pot life 18 min, cure 3 h, mix 1A:1B"
+url = "https://www.smooth-on.com/tb/files/ECOFLEX_SERIES_TB.pdf"
+
+[purchase]
+kit_size = "Trial Unit, 2 lb (0.91 kg), parts A and B"
+kit_mass_kg = 0.907
+price_usd = 34.86
+price_per_kg_usd = 38.43
+vendor = "Smooth-On store"
+url = "https://shop.smooth-on.com/ecoflex-00-50"
+checked = "2026-10-19"
+notes = '''Reynolds Advanced Materials (reynoldsam.com/product/ecoflex-00-50) lists identical prices. A 400 mL cartridge (1 lb) costs $32.65, but it needs a dispensing gun and static mixers. Gallon Unit (16 lb, 7.26 kg): $215.00, or $29.62/kg. 5 gallon unit at Reynolds: $885.62. Prices exclude shipping and tax, which were not checked. Blick and Amazon were not checked for this grade. The 18 min pot life is the shortest of the Ecoflex grades, so leave enough time for degassing.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 19.54
+c20_kPa = 1.137
+c30_kPa = 0.0
+test = "uniaxial tension, first loading of virgin rectangular strips 50 x 5 x 1 mm, 0.1 /s to 400% strain, room temperature; strain from crosshead, no extensometer reported"
+stretch_range = [1.0, 5.0]
+source = "Liao, Hossain, Yao 2020, Mechanics of Materials 144:103366, Table 2 (accepted pre-proof, Swansea Cronfa record 53571)"
+doi = "10.1016/j.mechmat.2020.103366"
+confidence = "medium"
+notes = '''Conversion. The model is the Shore-dependent one described in ecoflex_00-30.toml: C10 = mu X_eq/2 + c1 X_ov, C20 = c2 X_ov^2, C30 = 0. For 00-50, s = 50/10 - 1 = 4, so X_eq = 1 + 0.6202 x 4 = 3.4808 and X_ov = 1 + 0.1788 x 4 + 0.01851 x 16 = 2.01136. Then C10 = 11.23 x 3.4808 / 2 = 19.54 kPa and C20 = 0.281 x 2.01136^2 = 1.137 kPa, which gives mu0 = 39.1 kPa. 00-50 was one of the three grades used for calibration.
+
+Check at lam = 2: P = 3.5 x (19.54 + 2 x 1.137 x 2) = 84.3 kPa. The datasheet gives 82.7 kPa, a ratio of 1.02.
+
+Equibiaxial nominal stress at lam = 2 is 122.3 kPa. The fit is to total stress on virgin material at 0.1 /s; Mullins softening after the first stretch is not included.'''
+
+[[fits]]
+model = "ogden"
+mu_kPa = [19.49]
+alpha = [2.50]
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328, file Tensile-Tests-Data/Ecoflex 00-50.csv). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "low"
+notes = '''Method. This uses the same canonical 1-term Ogden least-squares method as ecoflex_00-30.toml: lam from 1.02 to 4.0, mu >= 0. 2- and 3-term fits were no better.
+
+Error vs data: +9% at lam = 1.1, +1% at 1.25, -2% at 1.5, 0% at 2, +1% at 3, -1% at 4.
+
+Check at lam = 2: P = (2 x 19.49 / 2.50)(2^1.5 - 2^-2.25) = 40.8 kPa. The data give 41.0 kPa and the datasheet 82.7 kPa, a ratio of 0.49. FLAG: this disagrees with the datasheet by about 2x. The raw data reach 1640% strain against 980% on the datasheet, which suggests crosshead strain overstates specimen strain, so the curve is probably too soft. Treat it as a soft bound.
+
+Equibiaxial nominal stress at lam = 2 is 43.9 kPa.'''
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 47.28
+test = "none, manufacturer 100% modulus only"
+stretch_range = [1.0, 2.0]
+source = "Smooth-On Ecoflex Series technical bulletin, 100% modulus 12 psi = 82.7 kPa"
+confidence = "low"
+notes = '''Datasheet estimate. For incompressible neo-Hookean uniaxial tension, P = mu (lam - lam^-2), so at lam = 2, mu = P_100 / 1.75 = 82.7 / 1.75 = 47.3 kPa. This is a single crude secant point, quoted to the nearest psi. Use it only for cross-grade comparison or sensitivity bounds.'''

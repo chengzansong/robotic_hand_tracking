@@ -1,0 +1,34 @@
+# Same as ../poc_contact_check.toml with contact disabled, for comparison.
+# Without contact the slot walls meet at about 1.5 kPa and pass through each
+# other by 0.26 mm at 2 kPa (poc_smoke run 20261020T060637Z), and by 0.62 mm
+# at 3 kPa in this study.
+name = "poc_contact_off"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0
+
+[materials]
+top = "_placeholder_neo_hookean"
+base = "_placeholder_neo_hookean"
+
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"                # validated against the full model in tune_half_y (T5)
+
+[load]
+case = "free"
+levels_kPa = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+
+[contact]
+enabled = false
+fric_coeff = 0.0
+
+[solver]                           # tuned on the smoke mesh (see README)
+max_ups = 0                        # full Newton
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"   # sliding-elastic contact needs the full tangent (T1)
+pressure_symmetric = false

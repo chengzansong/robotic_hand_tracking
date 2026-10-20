@@ -1,0 +1,79 @@
+# Smooth-On Ecoflex 00-10. Candidate for the finger body (softest grade).
+#
+# Fit choice. The default is the Liao et al. 2020 Yeoh fit, converted exactly.
+# The Ogden fit is this library's refit of the Marechal et al. 2021 raw data.
+# Marechal Table III is not used: its Ogden stress formula is non-standard and
+# cannot be converted, its Mooney-Rivlin fit gives mu0 = 2(21.8 - 72.2) = -101 kPa,
+# and its neo-Hookean uses W = mu (I1 - 3). See ecoflex_00-30.toml for details.
+#
+# FLAG: both independent tests (Liao, Marechal) measure 00-10 2.3x to 3.8x softer
+# at 100% strain than the datasheet. The datasheet gives the same 8 psi 100%
+# modulus for 00-10 and 00-20, quoted to the nearest psi, so the datasheet may be
+# the outlier, but this is not resolved. Smooth-On notes that 00-10 cures with a
+# tacky surface.
+id = "ecoflex_00-10"
+name = "Smooth-On Ecoflex 00-10"
+family = "ecoflex"
+density_kg_m3 = 1040
+
+[datasheet]
+shore_hardness = "00-10"
+modulus_100_kPa = 55.2               # 8 psi
+elongation_at_break_pct = 800
+tensile_strength_kPa = 827           # 120 psi
+source = "Smooth-On Ecoflex Series technical bulletin. Values after 7 days at 23 C. Specific gravity 1.04, pot life 30 min, cure 4 h, mix 1A:1B"
+url = "https://www.smooth-on.com/tb/files/ECOFLEX_SERIES_TB.pdf"
+
+[purchase]
+kit_size = "Trial Unit, 2 lb (0.91 kg), parts A and B"
+kit_mass_kg = 0.907
+price_usd = 36.05
+price_per_kg_usd = 39.74
+vendor = "Smooth-On store"
+url = "https://shop.smooth-on.com/ecoflex-00-10"
+checked = "2026-10-19"
+notes = '''Reynolds Advanced Materials (reynoldsam.com/product/ecoflex-00-10) lists identical prices. Gallon Unit (16 lb, 7.26 kg): $223.98, or $30.86/kg. 5 gallon unit at Reynolds: $927.66. Prices exclude shipping and tax, which were not checked. Blick and Amazon were not checked for this grade.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 5.615
+c20_kPa = 0.2810
+c30_kPa = 0.0
+test = "uniaxial tension, first loading of virgin rectangular strips 50 x 5 x 1 mm, 0.1 /s to 400% strain, room temperature; strain from crosshead, no extensometer reported"
+stretch_range = [1.0, 5.0]
+source = "Liao, Hossain, Yao 2020, Mechanics of Materials 144:103366, Table 2 (accepted pre-proof, Swansea Cronfa record 53571)"
+doi = "10.1016/j.mechmat.2020.103366"
+confidence = "low"
+notes = '''Conversion. The model is the Shore-dependent one described in ecoflex_00-30.toml: C10 = mu X_eq/2 + c1 X_ov, C20 = c2 X_ov^2, C30 = 0, with s = H/10 - 1. 00-10 is the reference grade, so s = 0 and X_eq = X_ov = 1. Then C10 = 11.23 / 2 + 0 = 5.615 kPa and C20 = 0.281 kPa, which gives mu0 = 11.2 kPa. 00-10 was one of the three grades used for calibration.
+
+Check at lam = 2, where I1-3 = 2: P = 3.5 x (5.615 + 2 x 0.281 x 2) = 23.6 kPa. The datasheet gives 55.2 kPa, a ratio of 0.43. FLAG: this disagrees with the datasheet by more than 2x, which is why confidence is low. The Marechal raw data are softer still (14.8 kPa at lam = 2).
+
+Equibiaxial nominal stress at lam = 2 is 33.3 kPa. The fit is to total stress on virgin material at 0.1 /s; Mullins softening after the first stretch is not included.'''
+
+[[fits]]
+model = "ogden"
+mu_kPa = [6.166]
+alpha = [2.82]
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328, file Tensile-Tests-Data/Ecoflex 00-10.csv). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "low"
+notes = '''Method. This uses the same canonical 1-term Ogden least-squares method as ecoflex_00-30.toml: lam from 1.02 to 4.0, mu >= 0. A 2-term fit only changed the error at lam = 1.1 from -16% to -10%.
+
+Error vs data: -16% at lam = 1.1, -2% at 1.25, -5% at 1.5, -1% at 2, +3% at 3, -4% at 4.
+
+Check at lam = 2: P = (2 x 6.166 / 2.82)(2^1.82 - 2^-2.41) = 14.6 kPa. The data give 14.8 kPa and the datasheet 55.2 kPa, a ratio of 0.27. FLAG: this disagrees with the datasheet by 3.8x. The raw data reach 1700% strain against 800% on the datasheet, which suggests crosshead strain overstates specimen strain. Treat this as a soft bound only.
+
+Equibiaxial nominal stress at lam = 2 is 15.4 kPa.'''
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 31.52
+test = "none, manufacturer 100% modulus only"
+stretch_range = [1.0, 2.0]
+source = "Smooth-On Ecoflex Series technical bulletin, 100% modulus 8 psi = 55.2 kPa"
+confidence = "low"
+notes = '''Datasheet estimate. For incompressible neo-Hookean uniaxial tension, P = mu (lam - lam^-2), so at lam = 2, mu = P_100 / 1.75 = 55.2 / 1.75 = 31.5 kPa.
+
+This is a single crude secant point, quoted to the nearest psi, and it is identical to the 00-20 value. Both test-based fits put 00-10 far softer than this. Use it only for cross-grade comparison or sensitivity bounds.'''

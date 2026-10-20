@@ -1,0 +1,6 @@
+# Copy to simulation/local.toml (gitignored) and fill in paths for this machine.
+# An environment variable such as FEBIO_EXE overrides the value here.
+
+# FEBio solver bundled with FEBio Studio, for example
+# febio_exe = 'C:\Program Files\FEBioStudio\bin\febio4.exe'
+febio_exe = ""

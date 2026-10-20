@@ -1,0 +1,57 @@
+# Proof-of-concept PneuNet finger, exported from Onshape on 2026-10-20.
+id = "finger_poc"
+name = "Actuator POC"
+
+# The STEP header declares metres. gmsh/OpenCASCADE imports it in mm.
+cad_units = "mm"
+assembly = "cad/assembly.step"   # original: "Actuator POC.step"
+
+notes = """
+Two-part cast: a chambered top body bonded to a flat base slab.
+Current plan casts both from the same Ecoflex, with the base made thick so it
+limits strain by geometry. Stage 1 checks whether a stiffer base material is
+worth the bonding difficulty.
+Imported extents (mm): assembly 112 x 15 x 19; base slab 112 x 15 x 4.
+The top's 1 mm lip and 20 pegs sink into the base (338 mm^3 overlap). They are
+pressed into the wet base silicone during casting, so the cured finger is one
+piece; the overlap is meshed as solid silicone (operator, 2026-10-20).
+"""
+
+[[parts]]
+name = "top"
+step = "cad/top.step"            # original: "Actuator POC - Actuator.step"
+role = "chambered body"
+default_material = "ecoflex_00-30"
+
+[[parts]]
+name = "base"
+step = "cad/base.step"           # original: "Base POC - Base.step"
+role = "base slab, strain limiting by thickness"
+default_material = "ecoflex_00-30"
+
+# Filled in by the Stage 1 mesher once surfaces are identified: which faces are
+# the clamped proximal end, the cavity walls, and the fingertip.
+[fem_tags]
+# Geometric selectors read by simulation/stage1_finger/mesh/build.py (no gmsh tags).
+# Finger axis is +x; chambers sit on +z over the base slab, so inflation curls
+# the finger toward -z. The CAD has no inlet port and is mirror-symmetric in x,
+# so the clamp end is a convention: x_min. Move it if an inlet is added.
+axis = "x"
+clamp_end = "min"             # clamp = planar exterior faces on x = x_min (top + base)
+bend_toward = "-z"            # bend-angle sign and blocked-force direction
+plane_tol_mm = 0.01           # tip = planar exterior faces on x = x_max
+cavity = "inner_shells"       # exterior boundary shells other than the outer skin
+interior_margin_mm = 0.5      # open-cavity fallback only
+# The top body's 1 mm lip and 20 pegs (338 mm^3, z 3-4) overlap the flat base
+# in assembly.step. They are pressed into the wet base during casting (one-piece
+# finger), so the fragmented overlap is meshed as top material.
+overlap_owner = "top"
+# Contact pairs between neighbouring chambers: planar exterior faces normal to
+# the axis, away from the ends; a face with solid on its -x side pairs with the
+# next face along +x that has solid on its +x side, within slot_max_gap_mm.
+# finger_poc: 10 slots, walls at x = 10/12, 20/22, ... 100/102 mm, gap 2 mm.
+slot_walls = "facing_planes"
+slot_max_gap_mm = 5.0
+min_wall_mm = 1.0             # thinnest wall (chamber walls); used by [mesh] wall_elems
+# Half model ([mesh] symmetry = "half_y" in a study) cuts at the y mid-plane
+# of the bounding box (y = 7.5 mm); the design is mirror-symmetric there.

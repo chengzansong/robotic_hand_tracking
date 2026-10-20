@@ -1,0 +1,15 @@
+# Test-only material for pipeline smoke runs. Not a real silicone fit.
+id = "_placeholder_neo_hookean"
+name = "Placeholder neo-Hookean, Ecoflex-like stiffness"
+family = "placeholder"
+density_kg_m3 = 1070
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 40.0
+poisson = 0.49
+test = "none"
+stretch_range = [1.0, 3.0]
+source = "none, chosen to be the right order of magnitude for soft Ecoflex"
+confidence = "low"
+notes = "Use only to check that meshing, input writing, and solving work end to end."

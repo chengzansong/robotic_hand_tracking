@@ -1,0 +1,77 @@
+# Smooth-On Dragon Skin 30. Candidate for a stiffer base layer.
+#
+# Fit choice. No accessible published coefficient set passed the checks.
+# Marechal et al. 2021 Table III is not used: its Ogden stress formula is
+# non-standard and cannot be converted, its Mooney-Rivlin fit gives
+# mu0 = 2(247 - 330) = -166 kPa, its Yeoh C1 = 0.1 MPa is the solver's initial
+# guess, and its neo-Hookean uses W = mu (I1 - 3). See ecoflex_00-30.toml.
+# The Ogden and Yeoh fits below are this library's refits of the Marechal raw
+# data in the canonical convention.
+id = "dragon_skin_30"
+name = "Smooth-On Dragon Skin 30"
+family = "dragon_skin"
+density_kg_m3 = 1080
+
+[datasheet]
+shore_hardness = "30A"
+modulus_100_kPa = 592.9              # 86 psi
+elongation_at_break_pct = 364
+tensile_strength_kPa = 3447          # 500 psi
+source = "Smooth-On Dragon Skin Series technical bulletin. Values after 7 days at 23 C. Specific gravity 1.08, pot life 45 min, cure 16 h, mix 1A:1B"
+url = "https://www.smooth-on.com/tb/files/DRAGON_SKIN_SERIES_TB.pdf"
+
+[purchase]
+kit_size = "Trial Unit, 2 lb (0.91 kg), parts A and B"
+kit_mass_kg = 0.907
+price_usd = 38.03
+price_per_kg_usd = 41.92
+vendor = "Smooth-On store"
+url = "https://shop.smooth-on.com/dragon-skin-30"
+checked = "2026-10-19"
+notes = '''Reynolds Advanced Materials (reynoldsam.com/product/dragon-skin-30) lists identical prices. Gallon Unit (16 lb, 7.26 kg): $237.43, or $32.72/kg. 5 gallon unit at Reynolds: $983.86. Prices exclude shipping and tax, which were not checked. Blick and Amazon were not checked for this grade. The 16 h cure is the slowest of these grades.'''
+
+[[fits]]
+model = "ogden"
+mu_kPa = [184.1]
+alpha = [2.80]
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328, file Tensile-Tests-Data/Dragon Skin 30.csv). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "medium"
+notes = '''Method. This uses the same canonical 1-term Ogden least-squares method as dragon_skin_10.toml: lam from 1.02 to 4.0, mu >= 0. 2- and 3-term fits collapsed to this single term.
+
+Error vs data: +13% at lam = 1.1, +8% at 1.25, +4% at 1.5, -1% at 2, -2% at 3.
+
+Check at lam = 2: P = (2 x 184.1 / 2.80)(2^1.8 - 2^-2.4) = 433.0 kPa. The data give 437.1 kPa and the datasheet 592.9 kPa, a ratio of 0.73, within 2x.
+
+The raw data reach 710% strain against 364% on the datasheet. That suggests crosshead strain overstates specimen strain, so this fit may be soft. The datasheet elongation (lam_break = 4.64) means stretches near the top of the fit range are close to failure.
+
+Equibiaxial nominal stress at lam = 2 is 457 kPa; the Yeoh fit below predicts 574 kPa.
+
+Confidence is medium: one lab, uniaxial only, a refit rather than published coefficients.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 106.1
+c20_kPa = 3.918
+c30_kPa = 0.0
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "low"
+notes = '''Method. This uses the same canonical Yeoh linear least-squares method as dragon_skin_10.toml, bounded by C10 >= 0 and C30 >= 0. C30 went to its bound of 0.
+
+Error vs data: +27% at lam = 1.1, +18% at 1.25, +9% at 1.5, -2% at 2, -5% at 3. The small-strain stiffness is overestimated.
+
+Check at lam = 2: P = 3.5 x (106.1 + 4 x 3.918) = 426.2 kPa, against a datasheet value of 592.9 kPa (ratio 0.72).'''
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 338.8
+test = "none, manufacturer 100% modulus only"
+stretch_range = [1.0, 2.0]
+source = "Smooth-On Dragon Skin Series technical bulletin, 100% modulus 86 psi = 592.9 kPa"
+confidence = "low"
+notes = '''Datasheet estimate. For incompressible neo-Hookean uniaxial tension, P = mu (lam - lam^-2), so at lam = 2, mu = P_100 / 1.75 = 592.9 / 1.75 = 338.8 kPa. This is a single crude secant point. Use it only for cross-grade comparison or sensitivity bounds.'''

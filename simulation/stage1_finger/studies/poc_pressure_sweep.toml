@@ -1,0 +1,27 @@
+# Free-bending pressure sweep of the POC finger in Ecoflex 00-30.
+# Outputs bend angle, tip path, cavity volume V(p), and peak wall stretch.
+name = "poc_pressure_sweep"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0              # Ecoflex cards give no K or poisson, so K = 100 mu0
+
+# Fit 0 (default) is the Liao 2020 Yeoh fit. Select another fit by index to
+# bracket stiffness, e.g. top = { material = "ecoflex_00-30", fit = 1 }  # Ogden refit
+#                         top = { material = "ecoflex_00-30", fit = 2 }  # datasheet neo-Hookean
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+
+[mesh]
+size_mm = 2.0
+wall_size_mm = 0.8
+wall_distance_mm = 2.0
+
+[load]
+case = "free"
+pressure_kPa = 20.0
+steps = 10
+
+[solver]
+substeps = 4                       # initial time steps per output step
+max_retries = 10

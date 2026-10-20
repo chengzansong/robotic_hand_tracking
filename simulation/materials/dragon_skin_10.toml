@@ -1,0 +1,77 @@
+# Smooth-On Dragon Skin 10. Candidate for a stiffer base layer.
+# The datasheet is identical for the Very Fast, Fast, Medium and Slow speeds;
+# only pot life and cure time differ. The fits are from Dragon Skin 10 MEDIUM.
+#
+# Fit choice. No accessible published coefficient set passed the checks.
+# Marechal et al. 2021 Table III is not used: its Ogden stress formula is
+# non-standard and cannot be converted, its Mooney-Rivlin fit gives
+# mu0 = 2(85.7 - 114) = -57 kPa, its Yeoh C1 = 0.1 MPa is the solver's initial
+# guess, and its neo-Hookean uses W = mu (I1 - 3). See ecoflex_00-30.toml.
+# The Ogden and Yeoh fits below are this library's refits of the Marechal raw
+# data in the canonical convention.
+id = "dragon_skin_10"
+name = "Smooth-On Dragon Skin 10 (fits from MEDIUM; datasheet same for all speeds)"
+family = "dragon_skin"
+density_kg_m3 = 1070
+
+[datasheet]
+shore_hardness = "10A"
+modulus_100_kPa = 151.7              # 22 psi
+elongation_at_break_pct = 1000
+tensile_strength_kPa = 3275          # 475 psi
+source = "Smooth-On Dragon Skin Series technical bulletin. Values after 7 days at 23 C. Specific gravity 1.07, mix 1A:1B. Pot life and cure: Very Fast 4 min / 30 min, Fast 8 min / 75 min, Medium 20 min / 5 h, Slow 45 min / 7 h"
+url = "https://www.smooth-on.com/tb/files/DRAGON_SKIN_SERIES_TB.pdf"
+
+[purchase]
+kit_size = "Trial Unit, 2 lb (0.91 kg), parts A and B (Dragon Skin 10 MEDIUM)"
+kit_mass_kg = 0.907
+price_usd = 37.50
+price_per_kg_usd = 41.34
+vendor = "Smooth-On store"
+url = "https://shop.smooth-on.com/dragon-skin-10-medium"
+checked = "2026-10-19"
+notes = '''Other speeds at the Smooth-On store: 10 FAST Trial Unit $37.50, and a 400 mL (1 lb) cartridge at $32.55, which needs a dispensing gun; 10 SLOW Trial Unit $37.56. Very Fast was not checked. Reynolds Advanced Materials (reynoldsam.com/product/dragon-skin-10-medium) lists identical prices. Gallon Unit (16 lb, 7.26 kg): $233.28, or $32.14/kg. 5 gallon unit at Reynolds: $966.53. Prices exclude shipping and tax, which were not checked. MEDIUM's 20 min pot life leaves time to degas.'''
+
+[[fits]]
+model = "ogden"
+mu_kPa = [44.37]
+alpha = [3.00]
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328, file Tensile-Tests-Data/Dragon Skin 10 MEDIUM.csv). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "medium"
+notes = '''Method. The fit is canonical 1-term Ogden: nominal P = (2 mu/alpha)(lam^(alpha-1) - lam^(-alpha/2-1)), least squares on engineering stress, 150 points uniform in lam from 1.02 to 4.0, weighted by 1/(P + 0.1 Pmax), with mu >= 0 so the energy stays positive in all modes. 2- and 3-term fits under that constraint collapsed to this single term.
+
+Error vs data: +13% at lam = 1.1, +11% at 1.25, +5% at 1.5, 0% at 2, -3% at 3.
+
+Check at lam = 2: P = (2 x 44.37 / 3.00)(2^2 - 2^-2.5) = 113.1 kPa. The data give 113.0 kPa and the datasheet 151.7 kPa, a ratio of 0.75, within 2x. The measured elongation at break (1040%) matches the datasheet (1000%), so the crosshead-strain bias seen in the Ecoflex data looks smaller here.
+
+Equibiaxial nominal stress at lam = 2 is 118 kPa; the Yeoh fit below predicts 158 kPa. Two fits that agree in uniaxial tension diverge by 30% in biaxial stretch.
+
+Confidence is medium: one lab, uniaxial only, a refit rather than published coefficients.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 26.36
+c20_kPa = 1.353
+c30_kPa = 0.0
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "low"
+notes = '''Method. The fit is canonical Yeoh: P = 2(lam - lam^-2)(C10 + 2 C20 (I1-3) + 3 C30 (I1-3)^2), linear least squares with the same weights and range as the Ogden fit, bounded by C10 >= 0 and C30 >= 0. C30 went to its bound of 0.
+
+Error vs data: +31% at lam = 1.1, +24% at 1.25, +11% at 1.5, -2% at 2, -6% at 3. The small-strain stiffness is overestimated, which is why confidence is low.
+
+Check at lam = 2: P = 3.5 x (26.36 + 4 x 1.353) = 111.2 kPa, against a datasheet value of 151.7 kPa (ratio 0.73).'''
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 86.68
+test = "none, manufacturer 100% modulus only"
+stretch_range = [1.0, 2.0]
+source = "Smooth-On Dragon Skin Series technical bulletin, 100% modulus 22 psi = 151.7 kPa"
+confidence = "low"
+notes = '''Datasheet estimate. For incompressible neo-Hookean uniaxial tension, P = mu (lam - lam^-2), so at lam = 2, mu = P_100 / 1.75 = 151.7 / 1.75 = 86.7 kPa. This is a single crude secant point. Use it only for cross-grade comparison or sensitivity bounds.'''

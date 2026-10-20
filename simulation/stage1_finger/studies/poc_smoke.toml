@@ -1,0 +1,21 @@
+# Pipeline smoke test: coarse mesh, placeholder material, low pressure.
+# Checks that meshing, .feb writing, solving, and reading work end to end.
+# Not a design result: _placeholder_neo_hookean is test-only.
+name = "poc_smoke"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0              # used only if a fit has no bulk_modulus_kPa or poisson
+
+[materials]
+top = "_placeholder_neo_hookean"
+base = "_placeholder_neo_hookean"
+
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+
+[load]
+case = "free"                      # free | blocked_force
+pressure_kPa = 2.0
+steps = 4

@@ -1,3 +1,11 @@
 opencv-python
 mediapipe
 numpy
+
+# Simulation (see simulation/README.md). FEBio itself is installed separately.
+gmsh
+meshio
+pyvista
+scipy
+pytest
+matplotlib

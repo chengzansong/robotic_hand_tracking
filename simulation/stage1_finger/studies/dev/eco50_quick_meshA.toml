@@ -1,0 +1,31 @@
+# Quick coarse (mesh A, ~8% stiff) Ecoflex 00-50 run for a RELATIVE comparison with tune_mesh_A (00-30, same mesh). Not a design value.
+# Mesh B (3 / 1.0 mm) is within ~1.5% of the finest mesh at 1 kPa (SW-4), so it is
+# used here. Half model (y mid-plane symmetry, validated to 0.2% in tune_half_y).
+# The range stops at 10 kPa, not 50: Ecoflex 00-30 bends ~97 deg at 2 kPa, so the
+# finger is expected to curl onto itself (tip meets base, not modelled) well
+# before 10 kPa. Levels past that point are not physical, and the run flags it.
+name = "eco50_quick_meshA"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0
+[materials]
+top = "ecoflex_00-50"              # fit 0: Liao 2020 Yeoh
+base = "ecoflex_00-50"
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[load]
+case = "free"
+levels_kPa = [1, 2, 4]
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false

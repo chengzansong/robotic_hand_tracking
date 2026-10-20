@@ -1,0 +1,21 @@
+# Blocked tip force vs pressure. The tip face is held by a prescribed zero displacement
+# along the bending axis (z); its summed reaction is the blocked force.
+# Simplest version: the whole tip face is held, which also stops it rotating.
+name = "poc_blocked_force"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0
+
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+
+[mesh]
+size_mm = 2.0
+wall_size_mm = 0.8
+wall_distance_mm = 2.0
+
+[load]
+case = "blocked_force"
+pressure_kPa = 20.0
+steps = 10

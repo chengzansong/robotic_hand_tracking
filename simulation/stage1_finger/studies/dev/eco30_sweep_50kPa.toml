@@ -1,0 +1,29 @@
+# SUPERSEDED by ../eco30_sweep_10kPa.toml: mesh A here is ~8% stiff (SW-4) and the finger curls onto itself near 6 kPa, so 50 kPa is out of reach. Kept for the record.
+# Ecoflex 00-30 free-bending sweep to 50 kPa with slot-wall contact.
+# Levels are dense at low pressure because bend per kPa is high there.
+# Ecoflex 00-30 at 50 kPa is expected to balloon or bend past 360 degrees;
+# where FEBio stops converging is itself a finding (results.json keeps the
+# converged levels and flags reached_full_load = false).
+name = "eco30_sweep_50kPa"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0              # Ecoflex cards give no K or poisson, so K = 100 mu0
+
+[materials]
+top = "ecoflex_00-30"              # fit 0: Liao 2020 Yeoh
+base = "ecoflex_00-30"
+
+[mesh]                             # set from the mesh convergence study
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+
+[load]
+case = "free"
+levels_kPa = [0.5, 1, 2, 3, 5, 7.5, 10, 15, 20, 30, 40, 50]
+
+[contact]
+enabled = true
+fric_coeff = 0.0
+
+[solver]                           # set from the tuning experiments

@@ -1,0 +1,56 @@
+# Smooth-On Ecoflex 00-20. Candidate for the finger body.
+#
+# Fit choice. The default is the Liao et al. 2020 Yeoh fit. 00-20 was a
+# validation grade in that paper: its coefficients come from the Shore-dependence
+# law calibrated on 00-10, 00-30 and 00-50, not from a fit to 00-20 data. The
+# authors show it agrees with their 00-20 tests (their Figs. 12 and 14).
+# Marechal et al. 2021 did not test 00-20, so there is no second source.
+id = "ecoflex_00-20"
+name = "Smooth-On Ecoflex 00-20"
+family = "ecoflex"
+density_kg_m3 = 1070
+
+[datasheet]
+shore_hardness = "00-20"
+modulus_100_kPa = 55.2               # 8 psi
+elongation_at_break_pct = 845
+tensile_strength_kPa = 1103          # 160 psi
+source = "Smooth-On Ecoflex Series technical bulletin. Values after 7 days at 23 C. Specific gravity 1.07, pot life 30 min, cure 4 h (00-20 FAST: 20 min pot life, 1 h cure, same properties), mix 1A:1B"
+url = "https://www.smooth-on.com/tb/files/ECOFLEX_SERIES_TB.pdf"
+
+[purchase]
+kit_size = "Trial Unit, 2 lb (0.91 kg), parts A and B"
+kit_mass_kg = 0.907
+price_usd = 33.44
+price_per_kg_usd = 36.86
+vendor = "Smooth-On store"
+url = "https://shop.smooth-on.com/ecoflex-00-20"
+checked = "2026-10-19"
+notes = '''Reynolds Advanced Materials (reynoldsam.com/product/ecoflex-00-20) lists identical prices. Gallon Unit (16 lb, 7.26 kg): $206.65, or $28.47/kg. 5 gallon unit at Reynolds: $851.89. Prices exclude shipping and tax, which were not checked. Blick and Amazon were not checked for this grade.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 9.097
+c20_kPa = 0.4028
+c30_kPa = 0.0
+test = "uniaxial tension, first loading of virgin rectangular strips 50 x 5 x 1 mm, 0.1 /s to 400% strain, room temperature; strain from crosshead, no extensometer reported"
+stretch_range = [1.0, 5.0]
+source = "Liao, Hossain, Yao 2020, Mechanics of Materials 144:103366, Table 2 (accepted pre-proof, Swansea Cronfa record 53571); Shore-law prediction for 00-20"
+doi = "10.1016/j.mechmat.2020.103366"
+confidence = "low"
+notes = '''Conversion. The model is the Shore-dependent one described in ecoflex_00-30.toml: C10 = mu X_eq/2 + c1 X_ov, C20 = c2 X_ov^2, C30 = 0. For 00-20, s = 20/10 - 1 = 1, so X_eq = 1 + 0.6202 = 1.6202 and X_ov = 1 + 0.1788 + 0.01851 = 1.19731. Then C10 = 11.23 x 1.6202 / 2 = 9.097 kPa and C20 = 0.281 x 1.19731^2 = 0.4028 kPa, which gives mu0 = 18.2 kPa.
+
+Check at lam = 2: P = 3.5 x (9.097 + 2 x 0.4028 x 2) = 37.5 kPa. The datasheet gives 55.2 kPa, a ratio of 0.68, within 2x.
+
+Equibiaxial nominal stress at lam = 2 is 51.9 kPa.
+
+Confidence is low because these are interpolated coefficients from one lab, and no 00-20-specific fit or second dataset was found. Mullins softening after the first stretch is not included.'''
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 31.52
+test = "none, manufacturer 100% modulus only"
+stretch_range = [1.0, 2.0]
+source = "Smooth-On Ecoflex Series technical bulletin, 100% modulus 8 psi = 55.2 kPa"
+confidence = "low"
+notes = '''Datasheet estimate. For incompressible neo-Hookean uniaxial tension, P = mu (lam - lam^-2), so at lam = 2, mu = P_100 / 1.75 = 55.2 / 1.75 = 31.5 kPa. This is a single crude secant point, quoted to the nearest psi. Use it only for cross-grade comparison or sensitivity bounds.'''

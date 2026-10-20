@@ -1,0 +1,77 @@
+# Smooth-On Dragon Skin 20. Candidate for a stiffer base layer.
+#
+# Fit choice. No accessible published coefficient set passed the checks.
+# Marechal et al. 2021 Table III is not used: its Ogden stress formula is
+# non-standard and cannot be converted, its Mooney-Rivlin fit gives
+# mu0 = 2(247 - 374) = -254 kPa, its Yeoh C1 = 0.1 MPa is the solver's initial
+# guess, and its neo-Hookean uses W = mu (I1 - 3). See ecoflex_00-30.toml.
+# The Ogden and Yeoh fits below are this library's refits of the Marechal raw
+# data in the canonical convention.
+id = "dragon_skin_20"
+name = "Smooth-On Dragon Skin 20"
+family = "dragon_skin"
+density_kg_m3 = 1080
+
+[datasheet]
+shore_hardness = "20A"
+modulus_100_kPa = 337.8              # 49 psi
+elongation_at_break_pct = 620
+tensile_strength_kPa = 3792          # 550 psi
+source = "Smooth-On Dragon Skin Series technical bulletin. Values after 7 days at 23 C. Specific gravity 1.08, pot life 25 min, cure 4 h, mix 1A:1B"
+url = "https://www.smooth-on.com/tb/files/DRAGON_SKIN_SERIES_TB.pdf"
+
+[purchase]
+kit_size = "Trial Unit, 2 lb (0.91 kg), parts A and B"
+kit_mass_kg = 0.907
+price_usd = 39.30
+price_per_kg_usd = 43.32
+vendor = "Smooth-On store"
+url = "https://shop.smooth-on.com/dragon-skin-20"
+checked = "2026-10-19"
+notes = '''Reynolds Advanced Materials (reynoldsam.com/product/dragon-skin-20) lists identical prices. Gallon Unit (16 lb, 7.26 kg): $245.64, or $33.85/kg. 5 gallon unit at Reynolds: $1017.61. Prices exclude shipping and tax, which were not checked. Blick and Amazon were not checked for this grade.'''
+
+[[fits]]
+model = "ogden"
+mu_kPa = [125.0]
+alpha = [2.94]
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328, file Tensile-Tests-Data/Dragon Skin 20.csv). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "medium"
+notes = '''Method. This uses the same canonical 1-term Ogden least-squares method as dragon_skin_10.toml: lam from 1.02 to 4.0, mu >= 0. A 2-term fit was no better.
+
+Error vs data: +22% at lam = 1.1, +14% at 1.25, +3% at 1.5, -2% at 2, -2% at 3, +5% at 4.
+
+Check at lam = 2: P = (2 x 125.0 / 2.94)(2^1.94 - 2^-2.47) = 310.9 kPa. The data give 318.4 kPa and the datasheet 337.8 kPa, a ratio of 0.92.
+
+The raw data reach 920% strain against 620% on the datasheet, so crosshead strain may overstate specimen strain somewhat, although the stress at 100% still agrees within 8%.
+
+Equibiaxial nominal stress at lam = 2 is 326 kPa; the Yeoh fit below predicts 427 kPa.
+
+Confidence is medium: one lab, uniaxial only, a refit rather than published coefficients.'''
+
+[[fits]]
+model = "yeoh"
+c10_kPa = 73.86
+c20_kPa = 3.419
+c30_kPa = 0.0
+test = "uniaxial tension, ASTM D412 die C dumbbells, 3 mm thick, 450 mm/min, mean of 5 pulls to failure; strain from crosshead over the 33 mm gauge length"
+stretch_range = [1.0, 4.0]
+source = "Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328). Not a published coefficient set"
+doi = "10.1089/soro.2019.0115"
+confidence = "low"
+notes = '''Method. This uses the same canonical Yeoh linear least-squares method as dragon_skin_10.toml, bounded by C10 >= 0 and C30 >= 0. C30 went to its bound of 0.
+
+Error vs data: +41% at lam = 1.1, +27% at 1.25, +9% at 1.5, -4% at 2, -4% at 3, +10% at 4. The small-strain stiffness is overestimated.
+
+Check at lam = 2: P = 3.5 x (73.86 + 4 x 3.419) = 306.4 kPa, against a datasheet value of 337.8 kPa (ratio 0.91).'''
+
+[[fits]]
+model = "neo_hookean"
+mu_kPa = 193.1
+test = "none, manufacturer 100% modulus only"
+stretch_range = [1.0, 2.0]
+source = "Smooth-On Dragon Skin Series technical bulletin, 100% modulus 49 psi = 337.8 kPa"
+confidence = "low"
+notes = '''Datasheet estimate. For incompressible neo-Hookean uniaxial tension, P = mu (lam - lam^-2), so at lam = 2, mu = P_100 / 1.75 = 337.8 / 1.75 = 193.1 kPa. This is a single crude secant point. Use it only for cross-grade comparison or sensitivity bounds.'''
