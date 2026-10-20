@@ -203,7 +203,8 @@ def run(study_path, solve=True, render=True, out_root=OUTPUTS_DIR, timeout_s=Non
 
 def postprocess(run_dir, mesh, study, backend, tags, solver_status, render=True):
     """Solver logs -> results.json, displacements.npz, plots, renders. Returns rows."""
-    from .analysis.plots import plot_sweep
+    from .analysis.curvature import turn_radius_sweep
+    from .analysis.plots import plot_sweep, plot_turn_radius
     from .analysis.sweep import summarize, sweep_rows
     from .backends.febio.writer import CONTACT_DEFAULTS
     try:
@@ -226,13 +227,24 @@ def postprocess(run_dir, mesh, study, backend, tags, solver_status, render=True)
               f"{summary['requested_max_kPa']:g} kPa", file=sys.stderr)
     np.savez_compressed(run_dir / "displacements.npz", pressure_kPa=p_all, u=u_all,
                         time=np.array([r["time"] for r in rows]))
+    turn = []
+    if study.load.case == "free":
+        try:
+            turn, _ = turn_radius_sweep(mesh, u_all, p_all, axis=tags["axis"],
+                                        bend_toward=tags["bend_toward"])
+        except ValueError as err:
+            print(f"turn radius skipped: {err}", file=sys.stderr)
     _json(run_dir / "results.json", {
         "study": study.name, "design": study.design.id, "load_case": study.load.case,
         **summary,
-        "definitions": "see simulation/stage1_finger/analysis/metrics.py and contact.py",
+        "definitions": "see simulation/stage1_finger/analysis/metrics.py, contact.py and curvature.py",
         "steps": rows,
+        "turn_radius": turn,
     })
     plot_sweep(rows, run_dir / "plots", title=f"{study.name} ({study.load.case})")
+    if turn:
+        plot_turn_radius(mesh, u_all, p_all, turn, run_dir / "plots", title=study.name,
+                         axis=tags["axis"], bend_toward=tags["bend_toward"])
     if render:
         _render(run_dir)
     return rows

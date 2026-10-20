@@ -1,0 +1,28 @@
+# Chamber height 13 -> 16 mm (pn_tall16), Ecoflex 00-30.
+# Mesh A (4 / 1.5 mm) reads ~8% stiff (SW-4): compare against cmp_eco30_meshA, not absolute.
+# 8 threads: run as a third job alongside two 12-thread runs.
+name = "cmp_tall16_meshA"
+design = "pn_tall16"
+backend = "febio"
+bulk_to_shear = 100.0
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 8
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+[load]
+case = "free"
+levels_kPa = [1, 2, 3, 4]

@@ -40,7 +40,7 @@ def test_postprocess_fake_logs(smoke_mesh, tmp_path, case):
     tip = mesh.node_sets["tip"]
     clamp = mesh.node_sets["clamp"]
     react = np.zeros((len(tip), 3))
-    react[:, 2] = 0.01            # constraint pushes the finger toward +z
+    react[:, 2] = -0.01           # FEBio convention: the finger pushes the support toward -z
     _write_log(tmp_path / LOG_FILES["all_nodes"], "all_nodes", times, u)
     _write_log(tmp_path / LOG_FILES["tip"], "tip", times,
                [np.hstack([mesh.nodes[tip] + ui[tip], ui[tip], t * react]) for t, ui in zip(times, u)])

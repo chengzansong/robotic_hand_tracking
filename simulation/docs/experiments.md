@@ -18,14 +18,63 @@ Run outputs (meshes, solver files, all renders) are written to `simulation/outpu
 | SW-3 | Solver tuning | About 3× faster, with answers unchanged to within 0.5% |
 | SW-4 | Mesh convergence | Mesh "B" (3 mm global, 1 mm at walls) is within 1.5% of the finest mesh |
 | SW-5 | **Ecoflex 00-30, 0–5 kPa** | **209° bend at 4 kPa, 287° at 5 kPa.** Peak stretch 1.81 |
+| SW-6 | **Blocked tip force** | Ecoflex 00-30: **0.017 N at 5 kPa,** 25–90× below target. Tall chambers plus a Dragon Skin 20 base: 2.2×. Stiffer silicone: force rises with stiffness at matching pressure |
 | SW-7 (first look) | Ecoflex 00-50 vs 00-30 | 00-50 bends about 0.63× as much at the same pressure |
+| Turn radius | New metric: circle fit to the base underside | R = 26 mm at 4 kPa, 18 mm at 5 kPa; circular to within 0.4% |
+| Design comparison | Dragon Skin 20 base; 16 mm tall chambers (mesh A) | **Tall chambers: +17% bend and +46% force.** A Dragon Skin 20 base: 0.68× bend, 1.48× force |
 
 **Takeaways so far:**
 
 - **Range of motion is easy to reach** with Ecoflex 00-30. The finger passes a 200° bend target at about 4 kPa, while the DS-370 pumps are listed at 10–60 kPa. Pressure needs limiting, or a stiffer grade.
-- **Tip force is the likely problem.** At such low pressures, a hand estimate gives only about 0.05–0.1 N, against 0.4–1.5 N targets. This has not been simulated yet; it is the next experiment.
-- **The thick, same-material base stretches 42% at 5 kPa,** so it is not acting as an inextensible layer.
+- **Tip force is the problem.** The blocked tip force is only 0.017 N at 5 kPa (SW-6), 25–90× below the 0.4–1.5 N targets.
+- **The base curls into an almost perfect circle:** R = 26 mm at 4 kPa and 18 mm at 5 kPa, so the finger can wrap a tennis-ball-sized object from about 3.3 kPa ([turn radius](#turn-radius-how-tightly-the-finger-curls)).
+- **The thick, same-material base stretches 42% at 5 kPa,** so it is not acting as an inextensible layer. A Dragon Skin 20 base cuts that to 8%, with 1.5× the force but two-thirds of the bend.
+- **Taller chambers are the clear geometry win:** 16 mm instead of 13 mm gives more bend and more force at the same pressure.
 - **Stiffness is uncertain.** Published Ecoflex 00-30 stiffness varies 2–4× by source (see [../materials/README.md](../materials/README.md)). A tensile test of our own cast silicone is the best way to narrow it.
+
+---
+
+## All results in one place
+
+Every design-relevant run, per pressure level. Mesh B is the accurate mesh; mesh A reads a few % stiff, so compare mesh A rows with the mesh A baseline. Column definitions are in [Turn radius](#turn-radius-how-tightly-the-finger-curls) and [SW-6](#sw-6-blocked-tip-force-first-result). To regenerate the full table for every run, including dev and tuning runs, run `python -m simulation.stage1_finger.summarize`. It writes `simulation/outputs/summary.md` and `summary.csv`.
+
+**Free bending:**
+
+| Variant | Mesh | p (kPa) | Bend (°) | R fit (mm) | Circularity (% of R) | Underside length | Cavity volume | Peak stretch, top / base |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Ecoflex 00-30 (reference) | B | 0.5 | 22 | — | — | 0.993 | +12% | 1.09 / 1.03 |
+|  |  | 1 | 45 | — | — | 0.986 | +20% | 1.16 / 1.07 |
+|  |  | 2 | 97 | 58.4 | 0.04 | 0.969 | +37% | 1.30 / 1.14 |
+|  |  | 3 | 150 | 37.1 | 0.10 | 0.952 | +57% | 1.45 / 1.22 |
+|  |  | 4 | 209 | 26.0 | 0.19 | 0.934 | +85% | 1.61 / 1.30 |
+|  |  | 5 | 287 | 18.4 | 0.38 | 0.910 | +130% | 1.81 / 1.42 |
+| Ecoflex 00-30 (baseline) | A | 1 | 42 | — | — | 0.987 | +20% | 1.14 / 1.04 |
+|  |  | 2 | 93 | — | — | 0.971 | +36% | 1.25 / 1.10 |
+|  |  | 3 | 144 | 38.6 | 0.09 | 0.955 | +55% | 1.36 / 1.16 |
+|  |  | 4 | 202 | 27.0 | 0.18 | 0.936 | +81% | 1.48 / 1.25 |
+| Dragon Skin 20 base | A | 1 | 26 | — | — | 0.993 | +18% | 1.14 / 1.02 |
+|  |  | 2 | 60 | — | — | 0.982 | +32% | 1.24 / 1.03 |
+|  |  | 3 | 97 | 59.5 | 0.03 | 0.972 | +49% | 1.34 / 1.05 |
+|  |  | 4 | 138 | 41.2 | 0.08 | 0.959 | +71% | 1.46 / 1.08 |
+| 16 mm tall chambers | A | 1 | 53 | — | — | 0.982 | +23% | 1.15 / 1.05 |
+|  |  | 2 | 111 | 50.7 | 0.04 | 0.963 | +42% | 1.27 / 1.11 |
+|  |  | 3 | 168 | 32.6 | 0.11 | 0.945 | +65% | 1.40 / 1.19 |
+|  |  | 4 | 236 | 22.7 | 0.23 | 0.923 | +99% | 1.56 / 1.29 |
+| Ecoflex 00-50 throughout | A | 1 | 27 | — | — | 0.992 | +14% | 1.10 / 1.03 |
+|  |  | 2 | 57 | — | — | 0.982 | +24% | 1.17 / 1.06 |
+|  |  | 4 | 122 | 46.1 | 0.06 | 0.962 | +46% | 1.31 / 1.13 |
+
+**Blocked tip force (mN), tip held in z:**
+
+| Variant (mesh A) | 1 kPa | 2 kPa | 2.5 kPa | 3 kPa | 4 kPa | 5 kPa | 10 kPa | 15 kPa | 20 kPa |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Ecoflex 00-30 (baseline) | 2.8 | 6.3 |  | 9.9 | 13.6 | 17.3 |  |  |  |
+| Dragon Skin 20 base | 3.5 | 8.4 |  | 13.7 | 19.5 | 25.6 |  |  |  |
+| 16 mm tall chambers | 4.1 | 9.2 |  | 14.8 | 20.3 | 25.3 |  |  |  |
+| Tall chambers + Dragon Skin 20 base | 5.1 | 12.2 |  | 20.1 | 28.7 | 37.6 |  |  |  |
+| Dragon Skin 20 throughout |  |  | 6.1 |  |  | 14.2 | 31.5 | 49.8 | 69.0 |
+
+![Bend, turn radius and blocked force for all mesh A variants](images/compare_meshA.png)
 
 ---
 
@@ -44,6 +93,7 @@ Run outputs (meshes, solver files, all renders) are written to `simulation/outpu
 
 - **SW-0.** A single quadratic tetrahedron stretched to 1.5× in FEBio matches the analytic neo-Hookean result to 0.06%. Its sideways shrinkage matches incompressibility (0.8167 vs 0.8165). This check is now a test: `simulation/tests/test_febio_uniaxial.py`.
   - **Found while doing it:** FEBio reports **zero reaction force** at nodes held with a "zero displacement" condition. The clamp and the blocked-force tip are therefore held with prescribed zero displacements, which do report forces.
+  - **Reaction sign (checked later, in SW-6):** FEBio logs the force the body exerts on the support. The test asserts this.
 - **SW-1.** Placeholder material (μ = 40 kPa), 0–2 kPa: the bend reached 51° at 2 kPa. The renders showed neighbouring chamber walls bulging toward each other and nearly touching, which led to SW-2.
 
 ## SW-2: chamber-wall contact
@@ -155,15 +205,108 @@ A quick run on the coarse mesh A, so compare ratios, not absolute values (`studi
 
 ![Ecoflex 00-50 bending at 1, 2, and 4 kPa](images/eco50_vs_eco30_meshA_montage.png)
 
+## Turn radius: how tightly the finger curls
+
+At higher pressures the base curls into a rough circle. The turn radius measures that circle on the surface that touches objects: the base underside, along the finger's centreline (the half model's symmetry face). Only the chambered length (x = 3–109 mm) is used, so the solid end walls don't distort it. Code: [../stage1_finger/analysis/curvature.py](../stage1_finger/analysis/curvature.py). Every free-bending run now reports it in `results.json` (`turn_radius`) and plots it to `plots/turn_radius*.png`.
+
+- **R fit:** radius of the best-fit circle through the deformed underside.
+- **Circularity:** how far the underside strays from that circle (RMS, as % of R). Small means it really is a circle.
+- **R avg:** arc length / bend over the same span, the mean radius. It matches the targets note's definition (200° ⇒ R ≤ 34 mm).
+- **Underside length:** deformed / original length of the underside. Below 1 means it is compressed, as the inside of a curl should be.
+- **Below about 90° of bend** a circle fit is ill-conditioned, so only R avg is quoted there.
+
+Check: a synthetic constant-curvature bend returns the exact radius with 0% residual (`simulation/tests/test_analysis.py`).
+
+Ecoflex 00-30, `finger_poc`, mesh B (from the SW-5 run, no new solve):
+
+| Pressure (kPa) | Bend (°) | R fit (mm) | R avg (mm) | Circularity (% of R) | Underside length |
+| --- | --- | --- | --- | --- | --- |
+| 0.5 | 22 | — | 264 | — | 0.99 |
+| 1 | 45 | — | 131 | — | 0.99 |
+| 2 | 97 | 58.4 | 59.3 | 0.04 | 0.97 |
+| 3 | 150 | 37.1 | 37.7 | 0.10 | 0.95 |
+| 4 | 209 | **26.0** | 26.5 | 0.19 | 0.93 |
+| 5 | 287 | **18.4** | 18.8 | 0.38 | 0.91 |
+
+![Dimensioned side views with the fitted circle and reference objects, 0.5–5 kPa](images/eco30_turn_radius_sides.png)
+
+![Turn radius, circularity and curvature along the finger vs pressure](images/eco30_turn_radius.png)
+
+Findings:
+
+- **The underside is almost a perfect circle.** It stays within 0.4% of R of a circle even at 5 kPa, and curvature is uniform along the finger to within about 3%. No part of the finger bends more than another, which is what equal chambers on a uniform base should give.
+- **What it can wrap:** R = 26 mm at 4 kPa and 18 mm at 5 kPa, against a tennis ball's 33.5 mm radius, a 26 mm cube (13 mm half-width) and a 20 mm grape (10 mm radius). The finger curls tightly enough to wrap a tennis ball from about 3.3 kPa. The grape and small cube are well inside its tightest curl, so they are tip-pinch objects.
+- **The underside compresses** by 9% at 5 kPa. So the neutral surface, which keeps its length, sits inside the base, about 2 mm above the underside.
+- **Average radius is mostly bend angle in mm** (R ≈ arc length / bend). The extra information is the circularity, the curvature profile, and radii that can be compared directly with object sizes.
+
+## SW-6: blocked tip force (first result)
+
+`studies/compare/sw6_blocked_eco30_meshA.toml`: Ecoflex 00-30, mesh A (relative accuracy only, about 8% stiff), half model, contact on. The whole tip face is held in z (the bend direction) but is free to slide along the finger and to rotate, like a fingertip resting on a load cell. The blocked force is the reaction on that face.
+
+| Pressure (kPa) | Blocked tip force (N) | Tip-face rotation (°) | Cavity volume increase |
+| --- | --- | --- | --- |
+| 1 | 0.0028 | 8 | +18% |
+| 2 | 0.0063 | 13 | +30% |
+| 3 | 0.0099 | 17 | +44% |
+| 4 | 0.0136 | 20 | +61% |
+| 5 | **0.017** | 24 | +84% |
+
+Held at the tip, the finger arches upward by about 8 mm mid-span instead of pressing harder. This is the expected shape for a clamped beam that "wants" to curl but is propped at its tip:
+
+![Blocked-force pose at 5 kPa](images/eco30_blocked_5kPa.png)
+
+- **The force is very small:** about 3.5 mN per kPa, so 0.017 N at 5 kPa. That is 25–90× below the 0.4–1.5 N targets, and about 3× below the earlier hand estimate.
+- **Sanity check:** the tip stiffness of a clamped beam (from the free-bending curvature and a rough bending stiffness of the slotted section) gives about 5 mN at 1 kPa, against 2.8 mN simulated. Same order.
+- **Sign convention, found while checking this:** FEBio logs reaction forces as the force the body exerts on its support, not the force the support exerts on the body. The single-element test now asserts the sign, and the blocked force reads positive toward the palm.
+### What raises the force
+
+Same setup, one change at a time (`studies/compare/sw6_blocked_*.toml`, mesh A, about 3–5 min each):
+
+| Variant | Force at 5 kPa (mN) | vs baseline | Force at the highest level |
+| --- | --- | --- | --- |
+| Baseline: Ecoflex 00-30, `finger_poc` | 17.3 | 1.0× | — |
+| Dragon Skin 20 base, Ecoflex 00-30 top | 25.6 | 1.48× | — |
+| Chambers 16 mm tall (`pn_tall16`) | 25.3 | 1.46× | — |
+| Both: tall chambers and a Dragon Skin 20 base | **37.6** | **2.18×** | — |
+| Dragon Skin 20 throughout | 14.2 | 0.82× | **69 mN at 20 kPa** |
+
+- **Base stiffness and chamber height each add about 1.5×, and the two multiply** (1.48 × 1.46 = 2.16, against 2.18 simulated).
+- **A stiffer silicone throughout scales force and pressure together.** Dragon Skin 20 at 20 kPa deforms like Ecoflex 00-30 at 4 kPa: tip rotation 20.4° vs 20.2°, cavity volume +63% vs +61%. It pushes 5.07× harder, the same as the ratio of initial shear moduli (125 / 25 kPa). So the stiffer grade gives the same motion at 5× the pressure and 5× the force. At the same pressure it pushes slightly less.
+- **Projection (extrapolated, not simulated):** Dragon Skin 30 (184 kPa, 7.3×) with tall chambers would give about 17 mN × 7.3 × 1.46 ≈ 0.19 N, at the roughly 30 kPa that full motion would then need. That fits the pumps' 10–60 kPa range but is still below the 0.4 N pinch target. Closing the rest of the gap needs a much stiffer base, such as an embedded fabric or paper strain-limiting layer (not yet modelled), or wider chambers, or sharing the load across fingers.
+- The material cards put all of these silicones at about $33–39 per trial kit, so cost does not decide between them.
+
+## Design comparison: base material and chamber height (mesh A)
+
+Ecoflex 00-30 baseline, against one change at a time, on mesh A with the same settings (`studies/compare/`). Mesh A reads 3% (at 4 kPa) to 8% (at 1 kPa) stiff against mesh B, so the ratios are what count.
+
+| Variant | Bend at 4 kPa | R fit at 4 kPa | Pressure for 200° | Blocked force at 5 kPa | Blocked force at the 200° pressure |
+| --- | --- | --- | --- | --- | --- |
+| Baseline: Ecoflex 00-30, 13 mm chambers | 202° | 27.0 mm | 4.0 kPa | 17.3 mN | 13.5 mN |
+| Dragon Skin 20 base | 138° (0.68×) | 41.2 mm | about 5.4 kPa (extrapolated) | 25.6 mN (1.48×) | about 28 mN (extrapolated, 2.1×) |
+| 16 mm tall chambers | **236° (1.17×)** | **22.7 mm** | **3.5 kPa** | **25.3 mN (1.46×)** | 17.4 mN (1.29×) |
+| Ecoflex 00-50 throughout | 122° (0.60×) | 46.1 mm | about 6.5 kPa (extrapolated) | not run | about 1.6× (scaling, see SW-6) |
+
+| Taller chambers, 2–4 kPa | Dragon Skin 20 base, 1–4 kPa |
+| --- | --- |
+| ![Turn radius, 16 mm tall chambers](images/tall16_turn_radius_sides.png) | ![Turn radius, Dragon Skin 20 base](images/ds20base_turn_radius_sides.png) |
+
+Findings:
+
+- **Taller chambers improve both bend and force.** 16 mm chambers bend 17% more and push 46% harder at the same pressure. Each chamber's end wall is larger and sits further from the base, so pressure produces more bending moment. The cost is 3 mm of finger height (19 → 22 mm) and 23% more cavity volume for the pump to fill.
+- **A Dragon Skin 20 base trades bend for force.** Its base stretches only 8% at 4 kPa, against 25% for an Ecoflex base, so less chamber work goes into stretching it. It bends about two-thirds as much, but at the pressure for full motion it should push about 2× harder (extrapolated). Casting a Dragon Skin base under an Ecoflex top needs a bond check (bench test).
+- **A stiffer grade throughout** (Ecoflex 00-50) only moves the operating pressure: the same motion at higher pressure, with force rising in proportion (SW-6 showed exact scaling for Dragon Skin 20).
+- **Every variant curls into a circle to within 0.25% of R.** None of these changes makes the curvature uneven along the finger.
+- **The force gap is still large.** The best combination simulated (tall chambers plus a Dragon Skin 20 base) gives 38 mN at 5 kPa, still 10–40× below the 0.4–1.5 N targets at these pressures. The remaining lever is pressure: stiffer silicone throughout, which moves full motion into the pumps' 10–60 kPa range.
+
 ---
 
 ## Next experiments
 
-1. **Blocked tip force** for Ecoflex 00-30 at 1–5 kPa. This tests the main open risk.
-2. **Grade sweep:** Ecoflex 00-50 on mesh B, then Dragon Skin 10/20/30.
-3. **Base material:** Dragon Skin base under an Ecoflex top.
-4. **Thickness variants:** base 2, 3, and 6 mm; chamber walls 0.75 and 1.5 mm. Generated with `python -m simulation.models.tools.make_pneunet --standard-variants`.
-5. **High-pressure mesh check:** for ballooning walls, and for the thin-wall variants.
+1. **A stiffer finger that keeps full motion inside the pump range:** Dragon Skin 20 or 30 throughout, with tall chambers, a free sweep plus blocked force to about 30–40 kPa. This is the most promising route to the force targets.
+2. **Strain-limiting layer:** model a thin, nearly inextensible sheet (paper or fabric) in the base, the standard PneuNet approach, and compare its force per kPa.
+3. **Tall chambers with a Dragon Skin 20 base, free bending:** blocked force is done (2.2×); the bend is not.
+4. **Confirm the best variant on mesh B**, and run the high-pressure and thin-wall mesh checks.
+5. **Thickness variants:** base 2, 3 and 6 mm; chamber walls 0.75 and 1.5 mm (`make_pneunet --standard-variants`).
 
 ---
 
@@ -190,5 +333,8 @@ Set up the environment and FEBio as described in [../README.md](../README.md). T
 | SW-4 | `studies/dev/tune_mesh_A/B/C.toml` | 9 / 15 / 11 min |
 | SW-5 | `studies/eco30_sweep_10kPa.toml` | 70 min to 5 kPa |
 | SW-7 | `studies/dev/eco50_quick_meshA.toml` | 11 min |
+| SW-6 | `studies/compare/sw6_blocked_*.toml` | 3–5 min each (mesh A) |
+| Design comparison | `studies/compare/cmp_*.toml` | 20–35 min each when sharing the CPU (mesh A, to 4 kPa) |
+| Turn radius, all tables | `python -m simulation.stage1_finger.summarize` (plus `--compare <studies>` for the overlay plot) | seconds |
 
 Each run writes `simulation/outputs/<study>/<UTC timestamp>/`, containing `results.json` (per-pressure metrics), `plots/`, and `renders/`. Look at the renders after every run.

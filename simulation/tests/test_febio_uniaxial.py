@@ -117,7 +117,10 @@ def test_uniaxial_neo_hookean(tmp_path):
     assert log_status(tmp_path / "uniaxial.log") == "normal"
     last = read_node_data(tmp_path / "x0.txt")[-1]
     assert last["time"] == pytest.approx(1.0)
-    force_N = abs(last["values"][:, 0].sum())
+    # FEBio logs the force the body exerts on the support: the x = 0 face of a
+    # bar pulled along +x reads +x. sweep.py's blocked-force sign relies on this.
+    force_N = last["values"][:, 0].sum()
+    assert force_N > 0
     P_MPa = MU_KPA * 1e-3 * (LAM - LAM ** -2)
     assert force_N == pytest.approx(2 / 3 * 0.5 * P_MPa, rel=0.01)
     uy = read_node_data(tmp_path / "y1.txt")[-1]["values"][0, 0]

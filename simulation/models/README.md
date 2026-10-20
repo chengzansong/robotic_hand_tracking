@@ -29,7 +29,7 @@ The finger is 112 × 15 × 19 mm. In the assembly frame, the base occupies z = 0
 `tools/make_pneunet.py` rebuilds this finger from its dimensions; the default parameters reproduce `finger_poc` exactly. It writes a new design folder for a variant:
 
 ```bash
-# one variant
+# one variant (flags: --base_mm, --wall_mm, --side_mm, --roof_mm, --cavity_h_mm)
 .venv\Scripts\python -m simulation.models.tools.make_pneunet pn_base3_wall1 --base_mm 3
 
 # the standard set used in the experiment log
@@ -41,6 +41,7 @@ The finger is 112 × 15 × 19 mm. In the assembly frame, the base occupies z = 0
 | `pn_base4_wall1` | none (exact copy, used as a reference) |
 | `pn_base2_wall1`, `pn_base3_wall1`, `pn_base6_wall1` | base 2 / 3 / 6 mm |
 | `pn_base4_wall0p75`, `pn_base4_wall1p5` | walls between chambers 0.75 / 1.5 mm. Pitch and gap stay fixed, and the chamber cavity absorbs the change |
+| `pn_tall16` | chambers 16 mm tall instead of 13 (the roof rises with them, so the finger is 22 mm high) |
 
 Generated folders are about 1.5 MB of STEP each, so they are not stored in git. Regenerate them with the command above.
 

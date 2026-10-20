@@ -8,10 +8,10 @@ Half models (mesh symmetry "half_y") are mirrored to the full model before
 any metric, so volumes, tip position, and stretches are full-model values.
 Logged reactions come from the half and are doubled in x and z; y cancels.
 
-Blocked force: FEBio's nodal reaction R is taken as the force the constraint
-applies to the finger. The finger then pushes on the support with -R, and
-blocked_force_N = -(R_tip . b) is positive when the finger pushes toward its
-bend side b.
+Blocked force: FEBio 4.13 logs the nodal reaction R as the force the body
+exerts on the support (checked 2026-10-20 on the single-tet10 tension test,
+where the held x = 0 face logs +x). So blocked_force_N = R_tip . b, positive
+when the finger pushes toward its bend side b.
 """
 
 import numpy as np
@@ -56,7 +56,7 @@ def sweep_rows(mesh, times, u, raw_steps, load, axis="x", bend_toward="-z",
         row["clamp_reaction_N"] = _full_reaction(raw.get("clamp_reaction_N"), half)
         if load.case == "blocked_force":
             r = row["tip_reaction_N"]
-            row["blocked_force_N"] = float(-(np.asarray(r) @ b)) if r is not None else 0.0
+            row["blocked_force_N"] = float(np.asarray(r) @ b) if r is not None else 0.0
         rows.append(row)
     unwrap_angles(rows)
     for r in rows:      # re-check the bend limit on the unwrapped angle

@@ -9,6 +9,7 @@ cross-section on 2026-10-19. Variants change one dimension at a time:
   finger length and the contact gap are unchanged; the chamber cavity length
   absorbs the change (cavity_x = pitch - slot - 2 * wall).
 - side_mm, roof_mm: side walls and roof over the chambers
+- cavity_h_mm: chamber height above the base top; the roof rises with it
 
 Assembly frame (mm): finger axis +x from 0, width along y from 0, base on
 z = 0..base_mm, chambered top above it with a 1 mm lip and pegs sunk into the
@@ -193,13 +194,16 @@ STANDARD_VARIANTS = {
     "pn_base6_wall1": {"base_mm": 6.0},
     "pn_base4_wall0p75": {"wall_mm": 0.75},
     "pn_base4_wall1p5": {"wall_mm": 1.5},
+    "pn_tall16": {"cavity_h_mm": 16.0},
 }
+
+CLI_DIMS = ("base_mm", "wall_mm", "side_mm", "roof_mm", "cavity_h_mm")
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("design_id", nargs="?")
-    for f in ("base_mm", "wall_mm", "side_mm", "roof_mm"):
+    for f in CLI_DIMS:
         ap.add_argument(f"--{f}", type=float)
     ap.add_argument("--material", default="ecoflex_00-30")
     ap.add_argument("--standard-variants", action="store_true",
@@ -211,7 +215,7 @@ def main():
         return
     if not a.design_id:
         ap.error("give a design_id or --standard-variants")
-    p = PneuNet(**{f: getattr(a, f) for f in ("base_mm", "wall_mm", "side_mm", "roof_mm")
+    p = PneuNet(**{f: getattr(a, f) for f in CLI_DIMS
                    if getattr(a, f) is not None})
     print(make(a.design_id, p, a.material))
 

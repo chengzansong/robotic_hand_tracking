@@ -90,3 +90,24 @@ def test_center_sections_on_synthetic_half_model(half_mesh, tmp_path):
     assert [s["pressure_kPa"] for s in summary] == p.tolist()
     assert all(s["inverted"] == 0 for s in summary)
     assert set(paths) >= set(pngs)
+
+
+@pytest.mark.parametrize("angle", [120.0, 270.0])
+def test_turn_radius_of_constant_curvature(half_mesh, smoke_mesh, tmp_path, angle):
+    """A constant-curvature bend about the underside is a circle of R = L / theta."""
+    from simulation.stage1_finger.analysis.curvature import turn_radius_sweep
+    from simulation.stage1_finger.analysis.plots import plot_turn_radius
+    R = 112.0 / np.radians(angle)
+    for mesh in (smoke_mesh[0], half_mesh[0]):
+        u = np.stack([synthetic_bend(mesh.nodes, angle, length_mm=112.0)])
+        rows, ids = turn_radius_sweep(mesh, u, [4.0])
+        r = rows[0]
+        assert r["R_fit_mm"] == pytest.approx(R, rel=1e-3)
+        assert r["R_avg_mm"] == pytest.approx(R, rel=1e-2)
+        assert r["circularity_rms_pct"] < 0.05
+        assert r["arc_stretch"] == pytest.approx(1.0, abs=2e-3)
+        assert r["fit_reliable"]
+        for q in r["kappa_profile"]:
+            assert q["kappa_per_mm"] == pytest.approx(1 / R, rel=2e-2)
+    paths = plot_turn_radius(mesh, u, [4.0], rows, tmp_path)
+    assert all(p.exists() for p in paths)
