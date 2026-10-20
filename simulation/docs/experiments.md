@@ -118,8 +118,18 @@ Cross-section through the middle of the finger at 5 kPa, coloured by stretch. Th
 Wall-gap map at 5 kPa. Orange is the contact patch, blue is open:
 ![Contact patch at 5 kPa](images/eco30_contact_patch_5kPa.png)
 
-A cross-section 3.5 mm off the midline, at the edge of the patch, zoomed in with mesh edges shown. Here the walls stay about 0.9 mm apart at every pressure. That is expected, not missing contact:
-![Off-centre chamber section at 5 kPa](images/eco30_section_chamber_5kPa_zoom.png)
+**On the exact centre plane** (y = 7.5 mm, the model's symmetry face, so no slicing artefacts), the walls of every gap meet in an hourglass pinch just above the gap's root, at z ≈ 9–11 mm. A small air pocket stays open below the pinch, and the gap opens into a V above it as the chambers balloon. The pinch first touches at 1 kPa and covers about 2 mm of wall height by 4–5 kPa. Cyan dots mark wall nodes in contact; the deepest overlap is 0.003 mm. Only 1–3 mesh nodes per gap resolve the pinch, so its length is approximate. 3.5 mm off the midline, the walls stay about 0.9 mm apart at every pressure, which is the edge of the patch.
+
+Centre plane at 5 kPa, zoomed on gaps 4–7 (the view turns with the finger):
+![Centre-plane section at 5 kPa](images/eco30_center_zoom_5kPa.png)
+
+Animations over the solved levels 0, 0.5, 1, 2, 3, 4, 5 kPa (not interpolated):
+
+| Zoom on gaps 4–7 | Whole finger |
+| --- | --- |
+| ![Centre-plane zoom, 0–5 kPa](images/eco30_center_zoom.gif) | ![Centre-plane whole finger, 0–5 kPa](images/eco30_center_full.gif) |
+
+To regenerate these, run `python -m simulation.stage1_finger.render <run folder> --center-sections`.
 
 Findings:
 

@@ -83,6 +83,8 @@ Each run writes to `simulation/outputs/<study>/<UTC timestamp>/`:
 
 **Always look at the renders.** Metrics alone don't show problems such as walls passing through each other.
 
+`--center-sections` on the render command also writes exact centre-plane cross-sections at every saved pressure level, with GIFs, to `renders/center/`. Optionally, `pip install imageio imageio-ffmpeg` adds MP4 versions.
+
 Parametric thickness variants (`pn_*`) are generated, not stored in git. Create them before running studies that use them:
 
 ```bash

@@ -61,3 +61,32 @@ def test_render_run_on_synthetic_sweep(smoke_mesh, tmp_path):
     assert {"mesh_tags.png", "deformed_100pct.png", "section_max.png",
             "sweep_montage.png"} <= names
     assert all(w.stat().st_size > 10_000 for w in written)
+
+
+def test_frame_indices_distinct():
+    from simulation.stage1_finger.analysis.render import _frame_indices
+    assert _frame_indices([0, 1, 2, 4]) == [1, 2, 3]          # was [1, 2, 2, 3]
+    assert _frame_indices([0, 0.5, 1, 2, 3, 4, 5]) == [2, 3, 5, 6]
+
+
+def test_center_sections_on_synthetic_half_model(half_mesh, tmp_path):
+    pytest.importorskip("pyvista")
+    from PIL import Image
+    from simulation.stage1_finger.analysis.render import render_center_sections
+    mesh, _ = half_mesh
+    (tmp_path / "mesh").mkdir()
+    mesh.save(tmp_path / "mesh" / "mesh.npz")
+    p = np.array([0.0, 1.0, 2.0])
+    np.savez(tmp_path / "displacements.npz", pressure_kPa=p,
+             u=np.stack([synthetic_bend(mesh.nodes, 30 * q) for q in p]))
+    paths, summary = render_center_sections(tmp_path)
+    out = tmp_path / "renders" / "center"
+    pngs = sorted(out.glob("center_*.png"))
+    assert len(pngs) == 2 * len(p)
+    assert all(f.stat().st_size > 10_000 for f in pngs)
+    for view in ("full", "zoom"):
+        with Image.open(out / f"center_{view}.gif") as gif:
+            assert gif.n_frames == len(p)
+    assert [s["pressure_kPa"] for s in summary] == p.tolist()
+    assert all(s["inverted"] == 0 for s in summary)
+    assert set(paths) >= set(pngs)

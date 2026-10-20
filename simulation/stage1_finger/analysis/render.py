@@ -8,12 +8,16 @@ All images go to <run_dir>/renders/:
                       the undeformed outline in gray
 - section_max.png     mid-plane section of the deformed state at max pressure,
                       colored by max principal stretch
-- sweep_montage.png   the deformed frames in one image (plus sweep.gif when
-                      imageio is installed)
+- sweep_montage.png   the deformed frames in one image, plus sweep.gif
 - contact_gaps_max.png slot walls between chambers at max pressure, colored by
                       the signed gap to the facing wall (red = interpenetration)
 
-Half models (mesh symmetry "half_y") are mirrored to the full finger first.
+On request (render CLI --center-sections), renders/center/ holds sections on
+the exact centre plane at every saved pressure level, with GIFs (and MP4s when
+imageio-ffmpeg is installed); see render_center_sections.
+
+Half models (mesh symmetry "half_y") are mirrored to the full finger first,
+except for the centre sections, which use the half mesh's symmetry face.
 
 Rendering uses the corner nodes only (linear tets), which is enough to see the
 shape. Side views look along +y at the half y > mid-plane, so x runs left to
@@ -24,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..mesh.fe_mesh import FEMesh, mirror_half, principal_stretches
+from ..mesh.fe_mesh import FEMesh, mirror_half, principal_stretches, tet10_jacobians
 from .contact import wall_gap_field
 
 PART_COLORS = ["#9ecae1", "#bdbdbd", "#c7e9c0", "#fdd0a2"]
@@ -221,8 +225,15 @@ def render_contact(mesh, pressure_kPa, u_max, path, clim=(-0.2, 1.0)):
 
 
 def _frame_indices(pressures):
-    p = np.asarray(pressures)
-    return [int(np.argmin(np.abs(p - f * p.max()))) for f in FRACTIONS]
+    """Distinct loaded levels nearest 25/50/75/100% of max, in order.
+
+    A sweep with fewer than four loaded levels gets fewer frames rather than a
+    repeated one.
+    """
+    p = np.asarray(pressures, float)
+    loaded = np.flatnonzero(p > 0)
+    idx = [int(loaded[np.argmin(np.abs(p[loaded] - f * p.max()))]) for f in FRACTIONS]
+    return sorted(set(idx))
 
 
 def render_sweep(mesh, pressures_kPa, u, renders_dir, color_by="displacement"):
@@ -293,6 +304,278 @@ def render_section(mesh, pressure_kPa, u_max, path):
     return path
 
 
+# --- centre-plane sections ----------------------------------------------------
+
+CENTER_SIZES = {"full": (1600, 896), "zoom": (1600, 800)}   # multiples of 16 for MP4
+CONTACT_COLORS = {"contact": "#00e5ff", "near": "#7fff00"}
+
+
+def _text_box(actor):
+    """White backing behind a text overlay so it stays readable over the mesh."""
+    prop = actor.GetTextProperty()
+    prop.SetBackgroundColor(1.0, 1.0, 1.0)
+    prop.SetBackgroundOpacity(0.85)
+
+
+def _rigid_xz(ref, cur):
+    """Best-fit rotation R (2x2) and shift t with cur ~ R ref + t in the (x, z) plane."""
+    P, Q = ref[:, [0, 2]], cur[:, [0, 2]]
+    pc, qc = P.mean(0), Q.mean(0)
+    U, _, Vt = np.linalg.svd((P - pc).T @ (Q - qc))
+    if np.linalg.det(Vt.T @ U.T) < 0:
+        Vt[-1] *= -1
+    R = Vt.T @ U.T
+    return R, qc - R @ pc
+
+
+def _plane_camera(pl, center_xz, y, scale, up_xz=(0.0, 1.0)):
+    """Parallel camera looking +y at (x, z) = center_xz, with an in-plane up direction."""
+    c = (center_xz[0], y, center_xz[1])
+    pl.camera_position = [(c[0], y - 500, c[2]), c, (up_xz[0], 0.0, up_xz[1])]
+    pl.camera.parallel_projection = True
+    pl.camera.parallel_scale = scale
+
+
+def _facet_owners(tris, tets, n_nodes):
+    """Index of the tet that each facet is a face of (matched on corners)."""
+    n = np.int64(n_nodes)
+    f = np.sort(tets[:, :4][:, [[0, 1, 3], [1, 2, 3], [2, 0, 3], [0, 2, 1]]], axis=2)
+    f = f.reshape(-1, 3).astype(np.int64)
+    keys = (f[:, 0] * n + f[:, 1]) * n + f[:, 2]
+    t = np.sort(tris[:, :3], axis=1).astype(np.int64)
+    q = (t[:, 0] * n + t[:, 1]) * n + t[:, 2]
+    order = np.argsort(keys)
+    hit = order[np.minimum(np.searchsorted(keys, q, sorter=order), len(order) - 1)]
+    if not np.array_equal(keys[hit], q):
+        raise ValueError("symmetry facets do not all match a tet face")
+    return hit // 4
+
+
+def _plane_section(mesh, tris, ids, points, lam, label):
+    """On-plane tri6 facets as linear sub-triangles at `points`, plus element edges.
+
+    `ids` are the facets' nodes; the polydata uses them as its points, in that
+    order. Each sub-triangle carries the stretch of the tet that owns its facet.
+    """
+    pv = _pv()
+    local = np.full(len(mesh.nodes), -1)
+    local[ids] = np.arange(len(ids))
+    owner = _facet_owners(tris, mesh.all_tets(), len(mesh.nodes))
+    sub = local[np.vstack([tris[:, [0, 3, 5]], tris[:, [3, 1, 4]],
+                           tris[:, [5, 4, 2]], tris[:, [3, 4, 5]]])]
+    poly = pv.PolyData(points[ids], np.hstack([np.full((len(sub), 1), 3), sub]).ravel())
+    poly.cell_data[label] = np.tile(lam[owner], 4)
+    # tri6 edges as corner - mid-node - corner, each segment once
+    seg = np.sort(local[tris[:, [0, 3, 3, 1, 1, 4, 4, 2, 2, 5, 5, 0]].reshape(-1, 2)], axis=1)
+    seg = np.unique(seg, axis=0)
+    edges = pv.PolyData(points[ids], lines=np.hstack([np.full((len(seg), 1), 2), seg]).ravel())
+    return poly, edges
+
+
+def _contour_section(mesh, y0, points, lam, label):
+    """Full-model fallback: the y_ref = y0 isosurface of the deformed volume."""
+    grid = volume_grid(mesh, points)
+    grid.cell_data[label] = lam
+    return grid.cell_data_to_point_data().contour([y0], scalars="y_ref"), None
+
+
+def _zoom_x_range(mesh, zoom_slots, pad_mm=1.0):
+    """Reference x range of the named slot walls, or the middle third of the finger."""
+    names = [f"{s}_{side}" for s in zoom_slots for side in ("lo", "hi")
+             if len(mesh.surfaces.get(f"{s}_{side}", []))]
+    if names:
+        x = mesh.nodes[np.unique(np.concatenate([mesh.surfaces[n].ravel() for n in names])), 0]
+        return x.min() - pad_mm, x.max() + pad_mm, [s for s in zoom_slots
+                                                     if f"{s}_lo" in names]
+    x0, w = mesh.nodes[:, 0].min(), np.ptp(mesh.nodes[:, 0])
+    return x0 + w / 3, x0 + 2 * w / 3, []
+
+
+def _gap_summary(mesh, gap, on_plane, slots, tol):
+    """Per slot: min signed gap over its wall nodes on the plane (None if none there)."""
+    out = {}
+    for s in slots:
+        ids = np.intersect1d(np.unique(np.concatenate(
+            [mesh.surfaces[f"{s}_lo"].ravel(), mesh.surfaces[f"{s}_hi"].ravel()])), on_plane)
+        g = gap[ids]
+        g = g[np.isfinite(g)]
+        out[s] = (float(g.min()), int((g < tol).sum())) if len(g) else None
+    return out
+
+
+def render_center_sections(run_dir, zoom_slots=("slot04", "slot05", "slot06", "slot07"),
+                           clim=None, gap_tol_mm=0.02, near_mm=0.1, frame_s=0.8, hold_s=2.5):
+    """Sections on the exact centre plane at every saved pressure level, as frames and GIFs.
+
+    Half models use the symmetry face of the half mesh itself (surface
+    "symmetry", on y = plane_y_mm), so there is no contouring and no mirror
+    seam. Full models fall back to the y_ref = mid-plane isosurface. Frames are
+    the solved levels only; nothing is interpolated. Writes to
+    <run_dir>/renders/center/:
+
+    - center_full_KK_<p>kPa.png  whole finger, one fixed camera for all levels
+    - center_zoom_KK_<p>kPa.png  `zoom_slots` with element edges, tracking the
+                                 slots at a fixed zoom
+    - center_full.gif, center_zoom.gif (and .mp4 with imageio-ffmpeg)
+
+    Colored by max principal stretch on one color range for all frames (`clim`,
+    default 1.0 to the largest value rounded up to 0.1). The undeformed section
+    outline is gray. Slot-wall nodes on the plane are marked where the signed
+    gap to the facing wall (contact.wall_gap_field) is below `gap_tol_mm`
+    (contact) or `near_mm` (near).
+    """
+    pv = _pv()
+    run_dir = Path(run_dir)
+    out = run_dir / "renders" / "center"
+    out.mkdir(parents=True, exist_ok=True)
+    mesh = FEMesh.load(run_dir / "mesh" / "mesh.npz")
+    d = np.load(run_dir / "displacements.npz")
+    p, u = d["pressure_kPa"], d["u"]
+    sym = mesh.info.get("symmetry")
+    label = "max principal stretch"
+    tets = mesh.all_tets()
+    if sym:
+        y0 = float(sym["plane_y_mm"])
+        tris = mesh.surfaces["symmetry"]
+        on_plane = np.unique(tris)
+        how = "half-model symmetry face"
+    else:
+        y0 = _mid_y(mesh)
+        on_plane = np.flatnonzero(np.abs(mesh.nodes[:, 1] - y0) < 1e-6)
+        how = "isosurface of the full model"
+    slots = [s for s in mesh.info.get("slots", []) if len(mesh.surfaces.get(f"{s}_lo", []))]
+    x_lo, x_hi, zoom_found = _zoom_x_range(mesh, zoom_slots)
+
+    frames = []
+    for k in range(len(p)):
+        pts = mesh.nodes + u[k]
+        lam = principal_stretches(mesh.nodes, pts, tets)[:, -1]
+        sec, edges = (_plane_section(mesh, tris, on_plane, pts, lam, label) if sym
+                      else _contour_section(mesh, y0, pts, lam, label))
+        gap = wall_gap_field(mesh, pts)
+        g = gap[on_plane]
+        frames.append({
+            "p": float(p[k]), "pts": pts, "sec": sec, "edges": edges,
+            "contact": on_plane[g < gap_tol_mm],
+            "near": on_plane[(g >= gap_tol_mm) & (g < near_mm)],
+            "gaps": _gap_summary(mesh, gap, on_plane, slots, gap_tol_mm),
+            "inverted": int((tet10_jacobians(pts, tets).min(1) <= 0).sum()),
+        })
+    if clim is None:
+        top = max(float(np.max(f["sec"][label])) for f in frames)
+        clim = (1.0, max(1.1, np.ceil(top * 10) / 10))
+
+    ref_poly = (_plane_section(mesh, tris, on_plane, mesh.nodes, np.ones(len(tets)), label)[0]
+                if sym else _contour_section(mesh, y0, mesh.nodes, np.ones(len(tets)), label)[0])
+    outline = ref_poly.extract_feature_edges(boundary_edges=True, feature_edges=False,
+                                             manifold_edges=False, non_manifold_edges=False)
+    xmin, xmax, zmin, zmax = _xz_bounds(np.vstack([ref_poly.points]
+                                                  + [f["sec"].points for f in frames]))
+    full_bounds = (xmin, xmax, zmin, zmax + 0.08 * (zmax - zmin))   # headroom for the text
+    # zoom: the on-plane wall nodes of the zoom slots (nodes near the plane in
+    # their x range for full models). Each level gets their best-fit rigid motion
+    # from the reference; the zoom camera turns with it and the gray outline is
+    # moved by it, at one zoom for all levels.
+    walls = [np.intersect1d(np.unique(np.concatenate(
+        [mesh.surfaces[f"{s}_{side}"].ravel() for side in ("lo", "hi")])), on_plane)
+        for s in zoom_found]
+    zoom_ids = (np.concatenate(walls) if walls else np.flatnonzero(
+        (mesh.nodes[:, 0] >= x_lo) & (mesh.nodes[:, 0] <= x_hi)
+        & (np.abs(mesh.nodes[:, 1] - y0) < 1.0)))
+    aspect = CENTER_SIZES["zoom"][0] / CENTER_SIZES["zoom"][1]
+    fits, need = [], []
+    for f in frames:
+        R, t = _rigid_xz(mesh.nodes[zoom_ids], f["pts"][zoom_ids])
+        local = (f["pts"][zoom_ids][:, [0, 2]] - t) @ R      # R^T (x - t): slot frame
+        lo, hi = local.min(0), local.max(0)
+        fits.append((R, t, (lo + hi) / 2))
+        w, h = 1.1 * (hi - lo) + 2.0
+        need.append(max(h, w / (0.82 * aspect)))
+    zoom_scale = 0.56 * max(need)
+
+    levels = ", ".join(f"{q:g}" for q in p)
+    zoom_name = (f"{zoom_found[0]}-{zoom_found[-1]}" if zoom_found
+                 else f"x_ref {x_lo:.0f}-{x_hi:.0f} mm")
+    written = {"full": [], "zoom": []}
+    for k, f in enumerate(frames):
+        contact_txt = (f"slot-wall nodes on the plane: {len(f['contact'])} in contact "
+                       f"(gap < {gap_tol_mm:g} mm), {len(f['near'])} near (< {near_mm:g} mm)")
+        head = (f"p = {f['p']:g} kPa, exact centre plane y = {y0:g} mm ({how})\n"
+                f"solved level {k + 1} of {len(p)} ({levels} kPa), not interpolated\n")
+        if f["inverted"]:
+            head += f"WARNING: {f['inverted']} inverted elements in the model\n"
+        R, t, c_local = fits[k]
+        # box centre at 41% of the width, clear of the color bar
+        c_local = c_local + [0.09 * 2 * zoom_scale * aspect, 0.0]
+        turn = round(float(np.degrees(np.arctan2(R[1, 0], R[0, 0]))))
+        zoom_gaps = "; ".join(
+            f"{s}: " + (f"min {f['gaps'][s][0]:.3f} mm" if f["gaps"].get(s) else "none")
+            for s in zoom_found)
+        zoom_outline = outline.copy()
+        moved = np.array(outline.points)
+        moved[:, [0, 2]] = moved[:, [0, 2]] @ R.T + t
+        zoom_outline.points = moved
+        views = {
+            "full": (outline, head + contact_txt, False),
+            "zoom": (zoom_outline,
+                     head + f"zoom on {zoom_name}, element edges shown, view turned "
+                     f"{turn} deg with the slots\n" + contact_txt
+                     + (f"\non-plane wall gap {zoom_gaps}" if zoom_gaps else ""),
+                     True),
+        }
+        for view, (ref_line, text, show_edges) in views.items():
+            size = CENTER_SIZES[view]
+            pl = pv.Plotter(off_screen=True, window_size=size)
+            # at y = y0, so push the outline behind and edges and markers in front
+            pl.add_mesh(ref_line.translate((0, 0.5, 0)), color="#9e9e9e", line_width=1.5,
+                        opacity=0.6)
+            pl.add_mesh(f["sec"], scalars=label, clim=clim, cmap="magma",
+                        show_edges=show_edges and f["edges"] is None, edge_color="#999999",
+                        scalar_bar_args={"title": label, **BAR})
+            if show_edges and f["edges"] is not None:
+                pl.add_mesh(f["edges"].translate((0, -0.05, 0)), color="#999999",
+                            line_width=0.8)
+            for kind in ("near", "contact"):
+                if len(f[kind]):
+                    # plain points: sphere points do not render off-screen here
+                    pl.add_points(f["pts"][f[kind]] + [0, -0.2, 0],
+                                  color=CONTACT_COLORS[kind],
+                                  point_size=10 if view == "zoom" else 6)
+            if view == "zoom":
+                for s, ids in zip(zoom_found, walls):
+                    top = ids[mesh.nodes[ids, 2] >= mesh.nodes[ids, 2].max() - 1e-6]
+                    pl.add_point_labels(f["pts"][top].mean(0, keepdims=True) + [0, -0.3, 0],
+                                        [s], font_size=14, show_points=False,
+                                        shape_opacity=0.6, always_visible=True)
+            _text_box(pl.add_text(text, font_size=10 if view == "full" else 9))
+            _text_box(pl.add_text(
+                "gray: undeformed outline" + (", rigidly moved with the slots" if show_edges
+                                              else "")
+                + "   cyan: on-plane slot-wall nodes in contact   green: near",
+                position="lower_left", font_size=8))
+            if view == "full":
+                _side(pl, full_bounds, aspect=size[0] / size[1])
+            else:
+                _plane_camera(pl, R @ c_local + t, y0, zoom_scale, up_xz=R[:, 1])
+            path = out / f"center_{view}_{k:02d}_{f['p']:g}kPa.png"
+            pl.screenshot(str(path))
+            pl.close()
+            written[view].append(path)
+
+    paths = written["full"] + written["zoom"]
+    for view, pngs in written.items():
+        paths.append(_gif(pngs, out / f"center_{view}.gif", frame_s, hold_s))
+        mp4 = _mp4(pngs, out / f"center_{view}.mp4", frame_s, hold_s)
+        if mp4:
+            paths.append(mp4)
+    summary = [{"pressure_kPa": f["p"], "contact_nodes": len(f["contact"]),
+                "near_nodes": len(f["near"]), "inverted": f["inverted"],
+                "slot_min_gap_on_plane_mm": {s: (v[0] if v else None)
+                                             for s, v in f["gaps"].items()}}
+               for f in frames]
+    return paths, summary
+
+
 def _montage(frames, path):
     import matplotlib.image as mpimg
     imgs = [mpimg.imread(str(f))[..., :3] for f in frames]
@@ -302,12 +585,30 @@ def _montage(frames, path):
     mpimg.imsave(str(path), np.vstack(rows))
 
 
-def _gif(frames, path):
+def _gif(frames, path, frame_s=0.8, hold_s=None):
+    """Looping GIF with Pillow, frame_s per frame and hold_s on the last one."""
+    from PIL import Image
+    imgs = [Image.open(f).convert("RGB") for f in frames]
+    ms = [round(1000 * frame_s)] * len(imgs)
+    ms[-1] = round(1000 * (hold_s or frame_s))
+    imgs[0].save(str(path), save_all=True, append_images=imgs[1:], duration=ms, loop=0)
+    return path
+
+
+def _mp4(frames, path, frame_s=0.8, hold_s=None, fps=10):
+    """MP4 at `fps` with each frame repeated for its duration; None without imageio-ffmpeg."""
     try:
         import imageio.v2 as imageio
+        import imageio_ffmpeg  # noqa: F401
     except ImportError:
         return None
-    imageio.mimsave(str(path), [imageio.imread(str(f)) for f in frames], duration=0.8)
+    reps = [round(frame_s * fps)] * len(frames)
+    reps[-1] = round((hold_s or frame_s) * fps)
+    with imageio.get_writer(str(path), fps=fps, macro_block_size=16) as w:
+        for f, n in zip(frames, reps):
+            img = imageio.imread(str(f))[..., :3]
+            for _ in range(n):
+                w.append_data(img)
     return path
 
 
