@@ -67,3 +67,6 @@ estimates.csv
 #   python -m simulation.models.tools.make_pneunet --standard-variants
 # finger_poc/ (source CAD) and tools/ stay tracked
 simulation/models/pn_*/
+
+# Control run output (demo plots)
+control/outputs/

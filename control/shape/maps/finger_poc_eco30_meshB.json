@@ -1,0 +1,56 @@
+{
+  "design": "finger_poc",
+  "material": "ecoflex_00-30",
+  "source_run": "simulation/outputs/eco30_sweep_10kPa/20261020T121529Z/results.json",
+  "study": "eco30_sweep_10kPa",
+  "load_case": "free",
+  "solver_status": "timeout",
+  "curvature_rule": "1/R_fit past ~90 deg of span turning, 1/R_avg below, else bend/arc_length; see curvature_source",
+  "curvature_source": [
+    "zero",
+    "1/R_avg",
+    "1/R_avg",
+    "1/R_fit",
+    "1/R_fit",
+    "1/R_fit",
+    "1/R_fit"
+  ],
+  "arc_length_mm": 106.0,
+  "pressure_kPa": [
+    0.0,
+    0.5,
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+    5.0
+  ],
+  "bend_deg": [
+    0.0,
+    22.201525146503233,
+    44.54072324549055,
+    96.64634898851129,
+    149.52502545699102,
+    208.62471496246482,
+    287.07838764008017
+  ],
+  "curvature_per_m": [
+    0.0,
+    3.7899,
+    7.6553,
+    17.1157,
+    26.9842,
+    38.4451,
+    54.4657
+  ],
+  "cavity_volume_mm3": [
+    9597.999999999993,
+    10733.912331168702,
+    11565.271635435305,
+    13177.815576920806,
+    15113.29271915658,
+    17748.935149696845,
+    22086.56837663305
+  ],
+  "blocked_force_N": null
+}

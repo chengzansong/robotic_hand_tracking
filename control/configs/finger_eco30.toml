@@ -1,0 +1,98 @@
+# Finger control config: Ecoflex 00-30 finger_poc, mesh B shape map.
+# Every tunable is here. Pressures are gauge kPa, flows are ml/s at atmosphere.
+# "placeholder" means no bench number yet; the bench test that replaces it is named.
+
+[finger]
+name = "Index"
+shape_map = "shape/maps/finger_poc_eco30_meshB.json"   # relative to control/
+p_cap_kPa = 5.5          # design pressure cap; also clips the inverse shape map
+
+[mapping]
+# "curvature": kappa* = kappa_h (default).  "angle": kappa* = kappa_h * L_h / L_robot.
+mode = "curvature"
+L_h_mm = 85.0            # human finger length, angle mode only (about 80-90 mm)
+L_robot_mm = 112.0
+
+[loop]
+rate_hz = 40.0           # control rate, matched to the sensor
+
+# ---- Plant (LumpedPlant): the "truth" the controller does not know ----------
+
+[pump]                   # placeholder until bench B2-B4
+q0_ml_s = 8.0            # free flow at full drive (bench point: 5.0 ml/s at unknown back-pressure)
+p_stall_kPa = 30.0       # back-pressure at which flow stops
+u_min = 0.25             # start duty; below it the pump does not turn
+tau_motor_s = 0.05       # spin-up lag (est.)
+
+[bleed]                  # fixed bleed, size set here; bench B5 measures the real one
+diameter_mm = 0.3        # orifice Q = Cd A sqrt(2 P / rho); 0.3 mm is about 1.7 ml/s at 1 kPa
+cd = 0.6
+n = 0.5                  # 0.5 orifice, 1.0 capillary / porous
+# k_ml_s = 1.7           # set this to give k directly (ml/s per kPa^n); overrides diameter_mm
+
+[plant]
+v_tube_ml = 1.0          # short hard tube, under 1 ft
+dt_s = 0.001             # integration step
+watchdog_s = 0.2         # plant cuts the pump if no duty command arrives for this long
+seed = 1                 # seeds the sensor gain, offset and noise draws
+
+[sensor]                 # MPS20N0040D + HX710B; placeholder until bench B6
+rate_hz = 40.0           # 10 or 40
+latency_s = 0.03
+gain_error_sigma = 0.01  # raw gain error, 1 sigma (est.)
+offset_sigma_kPa = 0.15  # raw offset, 1 sigma; the startup zero removes it
+noise_sigma_kPa = 0.08
+lsb_kPa = 0.01
+range_kPa = 40.0
+
+# ---- Controller side -------------------------------------------------------
+
+[estimator]
+zero_s = 1.0             # startup zero: average this long with the finger vented
+gain = 1.0               # sensor gain from calibration (placeholder until bench B6)
+offset_kPa = 0.0         # overwritten by the startup zero
+filter = "alpha_beta"    # or "ema"; both follow a median-of-3
+alpha = 0.3
+beta = 0.05
+ema_alpha = 0.4
+range_lo_kPa = -1.0      # faults
+range_hi_kPa = 12.0
+stuck_n = 20             # identical raw readings in a row
+max_slope_kPa_s = 25.0   # faster than the pump could drive it
+
+[model]                  # what the controller believes (prior for u_ff); placeholder until bench B2-B5
+q0_ml_s = 8.0
+p_stall_kPa = 30.0
+u_min = 0.25
+bleed_mm = 0.3
+cd = 0.6
+n = 0.5
+
+[safety]
+p_cap_kPa = 5.5          # u = 0 at or above this P_hat (Ecoflex 00-30; the finger self-contacts past about 6 kPa)
+cap_release_kPa = 0.3    # u stays 0 until P_hat is this far below the cap
+max_duty = 0.9
+watchdog_s = 0.2         # no fresh sensor sample for this long: u = 0
+
+[controller]
+type = "pi_ff"           # "pi_ff", "bang_bang", "open_loop_volume" ("pi_ff_valve" is a stub)
+
+[controller.pi_ff]
+kp = 0.7                 # duty per kPa
+ki = 0.5                 # duty per kPa per second
+kd = 0.05                # duty per kPa/s on the filtered slope
+i_max = 0.4              # integrator clamp, in duty
+u_max = 1.0
+ff_learn = true          # learn u_ff(P*) while settled
+ff_rate_per_s = 0.3
+settle_band_kPa = 0.15
+settle_slope_kPa_s = 0.4
+settle_hold_s = 0.5
+
+[controller.bang_bang]
+h_kPa = 0.15             # half-width of the hysteresis band; at least about the sensor noise
+u_on = 0.75
+
+[controller.open_loop_volume]
+u_run = 0.8
+hold = true              # after the fill, hold at the model's balance duty
