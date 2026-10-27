@@ -4,6 +4,7 @@ import mediapipe as mp
 import numpy as np
 import time
 from pathlib import Path
+from curvature_calculation import finger_curvature
 
 # ---------- Configuration ----------
 
@@ -31,6 +32,14 @@ JOINTS = {
     "Middle": (9, 10, 11),
     "Ring": (13, 14, 15),
     "Pinky": (17, 18, 19)
+}
+
+FINGERS = {
+    "Thumb": (1, 2, 3, 4),
+    "Index": (5, 6, 7, 8),
+    "Middle": (9, 10, 11, 12),
+    "Ring": (13, 14, 15, 16),
+    "Pinky": (17, 18, 19, 20)
 }
 
 
@@ -136,13 +145,16 @@ def main():
                 ])
 
                 for i, (finger, (a, b, c)) in enumerate(JOINTS.items()):
-                    angle = joint_angle(
-                        coords[a], coords[b], coords[c]
-                    )
-
+                    # Original joint angle calculation
+                    angle = joint_angle(coords[a], coords[b], coords[c])
+                    # Original normalized curl calculation
                     curl = normalize_curl(angle)
 
-                    # Display angle in degrees
+                    # New curvature calculation
+                    finger_points = coords[list(FINGERS[finger])]
+                    curvature = finger_curvature(finger_points)
+
+                    # Display joint angle
                     cv2.putText(
                         frame,
                         f"{finger}: {angle:.1f} deg",
@@ -151,13 +163,22 @@ def main():
                         0.7, (255, 255, 0), 2
                     )
 
-                    # Display normalized curl separately
+                    # Display normalized curl
                     cv2.putText(
                         frame,
                         f"Curl: {curl:.2f}",
                         (260, 35 + i * 30),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.7, (0, 255, 255), 2
+                    )
+
+                    # Display curvature
+                    cv2.putText(
+                        frame,
+                        f"Curvature: {curvature:.2f} m^-1",
+                        (430, 35 + i * 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7, (255, 0, 255), 2
                     )
             else:
                 cv2.putText(
