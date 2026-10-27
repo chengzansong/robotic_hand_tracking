@@ -13,6 +13,10 @@ Model:
   "elastic-solid" domain (FESolidDomainFactory; FEModelBuilder sets
   m_b3field_tet = false). Quadratic tets do not lock the way tet4 does, so
   no three-field formulation is needed. [solver] domain_type overrides it.
+- A sheet material (fabric card) on a layer part is written as a coupled
+  "solid mixture": neo-Hookean matrix plus tension-only fiber-pow-linear warp
+  and weft families along global axes (materials.febio_sheet_mixture). Its
+  domain is the same tet10 elastic-solid; parts are bonded by shared nodes.
 - Pressure on the cavity surface, ramped linearly by load controller 1.
   Facets point out of the solid, so a positive pressure inflates
   (FEPressureLoad: traction = -p * N).
@@ -45,7 +49,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .materials import febio_material
+from .materials import febio_material, febio_sheet_mixture
 
 KPA_TO_MPA = 1e-3
 KG_M3_TO_TONNE_MM3 = 1e-12
@@ -154,8 +158,11 @@ def _materials(root, part_materials, bulk_to_shear):
     mat_el = _sub(root, "Material")
     used = {}
     for i, (part, pm) in enumerate(part_materials.items(), start=1):
-        mtype, params, k_source = febio_material(pm.fit, bulk_to_shear)
         name = f"{part}_material"
+        if getattr(pm, "is_sheet", False):
+            used[part] = _sheet_material(mat_el, i, name, pm, bulk_to_shear)
+            continue
+        mtype, params, k_source = febio_material(pm.fit, bulk_to_shear)
         m = _sub(mat_el, "material", id=str(i), name=name, type=mtype)
         _sub(m, "density", pm.material.density_kg_m3 * KG_M3_TO_TONNE_MM3)
         for key in sorted(params, key=lambda k: (k[0] != "c", k)):
@@ -165,6 +172,28 @@ def _materials(root, part_materials, bulk_to_shear):
         _sub(m, "pressure_model", "default")
         used[part] = {"name": name, "type": mtype, "params_MPa": params, "k_source": k_source}
     return used
+
+
+def _sheet_material(mat_el, i, name, pm, bulk_to_shear):
+    """A sheet (fabric) cast into its matrix: a coupled "solid mixture" of a
+    neo-Hookean matrix and tension-only fiber-pow-linear warp and weft families
+    (see materials.febio_sheet_mixture). The fibre vectors are global axes: the
+    layer parts are flat, so no local material axes are needed."""
+    layer = pm.layer or {}
+    mtype, parts, info = febio_sheet_mixture(
+        pm.fit, pm.matrix.fit, layer.get("thickness_mm"), layer.get("warp_axis", "x"),
+        layer.get("weft_axis", "y"), pm.stiffness_scale, bulk_to_shear)
+    m = _sub(mat_el, "material", id=str(i), name=name, type=mtype)
+    _sub(m, "density", pm.matrix.material.density_kg_m3 * KG_M3_TO_TONNE_MM3)
+    for ctype, params in parts:
+        s = _sub(m, "solid", type=ctype)
+        for key, value in params.items():
+            if key == "fiber":
+                _sub(s, "fiber", value, type="vector")
+            else:
+                _sub(s, key, value)
+    return {"name": name, "type": mtype, "constituents": [{"type": t, **p} for t, p in parts],
+            "params_MPa": info, "k_source": info["matrix_k_source"]}
 
 
 def _tri6_surface(parent, name, facets):

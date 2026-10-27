@@ -1,0 +1,29 @@
+# Geometry control for the cloth designs: pn_cloth_hi with PLAIN Ecoflex 00-30 in the cloth
+# slot, so the finger is materially identical to finger_poc. Blocked force: it must reproduce sw6_blocked_eco30_meshA (2.8 / 6.3 / 9.9 / 13.6 / 17.3 mN at 1-5 kPa); free: cmp_eco30_meshA
+# (42 / 93 deg at 1 / 2 kPa) up to the small mesh change from the extra internal faces.
+name = "cloth_ctrl_blocked_meshA"
+design = "pn_cloth_hi"
+backend = "febio"
+bulk_to_shear = 100.0
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+cloth = "ecoflex_00-30"
+[load]
+case = "blocked_force"
+levels_kPa = [1, 2, 3, 4, 5]

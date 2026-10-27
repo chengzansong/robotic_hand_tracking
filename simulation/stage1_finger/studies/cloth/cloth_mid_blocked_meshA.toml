@@ -1,0 +1,31 @@
+# Placement study (mid), blocked tip force 1-5 kPa.
+# pn_cloth_mid: cloth layer z = 1..2 mm (top face at the plain finger's free-bending neutral surface, ~1.8-2.2 mm), 1 mm effective thickness, inset 1 mm at the sides.
+# Mesh A (4 / 1.5 mm) reads ~8% stiff (SW-4): relative comparisons only, against the mesh A
+# baselines cmp_eco30_meshA (free) and sw6_blocked_eco30_meshA (blocked).
+# Regenerate cloth designs first: python -m simulation.models.tools.make_pneunet --cloth-variants
+name = "cloth_mid_blocked_meshA"
+design = "pn_cloth_mid"
+backend = "febio"
+bulk_to_shear = 100.0
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+cloth = { material = "fabric_woven_cotton" }          # fit 0 (nominal), matrix = base silicone
+[load]
+case = "blocked_force"
+levels_kPa = [1, 2, 3, 4, 5]

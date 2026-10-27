@@ -11,6 +11,10 @@ Format (see studies/*.toml):
     [materials]                        # per-part override of the design defaults
     top = "ecoflex_00-30"              # fit 0 (the card's default)
     base = { material = "ecoflex_00-30", fit = 2 }   # fit by index
+    # A sheet card (kind = "sheet", e.g. a fabric) on a layer part such as
+    # "cloth" is cast into a matrix silicone: by default the base part's
+    # material; stiffness_scale multiplies the sheet's tension stiffness.
+    cloth = { material = "fabric_woven_cotton", matrix = "ecoflex_00-30", stiffness_scale = 1.0 }
 
     [mesh]
     size_mm = 2.0
@@ -53,19 +57,33 @@ class StudyError(ValueError):
 class PartMaterial:
     material: object       # simulation.core.materials.Material
     fit_index: int
+    # sheet materials only: the solid that impregnates the sheet, a scale on the
+    # sheet's tension stiffness, and the layer geometry from the design part
+    # (thickness_mm, warp_axis, weft_axis)
+    matrix: "PartMaterial | None" = None
+    stiffness_scale: float = 1.0
+    layer: dict | None = None
 
     @property
     def fit(self):
         return self.material.fits[self.fit_index]
 
+    @property
+    def is_sheet(self):
+        return self.material.kind == "sheet"
+
     def describe(self):
         f = self.fit
-        return {"material": self.material.id, "fit_index": self.fit_index,
-                "model": f.model, "params": f.params, "source": f.source,
-                "confidence": f.confidence, "bulk_modulus_kPa": f.bulk_modulus_kPa,
-                "poisson": f.poisson, "stretch_range": f.stretch_range,
-                "initial_shear_modulus_kPa": f.initial_shear_modulus_kPa(),
-                "density_kg_m3": self.material.density_kg_m3}
+        out = {"material": self.material.id, "fit_index": self.fit_index,
+               "model": f.model, "params": f.params, "source": f.source,
+               "confidence": f.confidence, "bulk_modulus_kPa": f.bulk_modulus_kPa,
+               "poisson": f.poisson, "stretch_range": f.stretch_range,
+               "initial_shear_modulus_kPa": None if self.is_sheet else f.initial_shear_modulus_kPa(),
+               "density_kg_m3": self.material.density_kg_m3}
+        if self.is_sheet:
+            out.update(kind="sheet", stiffness_scale=self.stiffness_scale, layer=self.layer,
+                       matrix=self.matrix.describe())
+        return out
 
 
 @dataclass
@@ -105,18 +123,24 @@ class Study:
     raw: dict = field(default_factory=dict)
 
 
+SHEET_KEYS = ("material", "fit", "matrix", "stiffness_scale")
+
+
 def _material(part, entry, materials_dir):
     if isinstance(entry, str):
         material_id, fit_index = entry, 0
     elif isinstance(entry, dict) and "material" in entry:
         material_id, fit_index = entry["material"], int(entry.get("fit", 0))
+        unknown = set(entry) - set(SHEET_KEYS)
+        if unknown:
+            raise StudyError(f"[materials] {part}: unknown keys {sorted(unknown)}")
     else:
         raise StudyError(f"[materials] {part}: use a card id or "
                          f"{{ material = \"id\", fit = 0 }}, got {entry!r}")
     if not (Path(materials_dir) / f"{material_id}.toml").exists():
         raise StudyError(
             f"material card {material_id!r} for part {part!r} not found in {materials_dir}. "
-            f"Available: {', '.join(list_materials(materials_dir, include_test=True))}")
+            f"Available: {', '.join(list_materials(materials_dir, include_test=True, kind=None))}")
     material = load_material(material_id, materials_dir)
     if not 0 <= fit_index < len(material.fits):
         raise StudyError(f"{material_id} has {len(material.fits)} fits; fit = {fit_index} "
@@ -139,6 +163,28 @@ def load_study(path, materials_dir=MATERIALS_DIR):
             raise StudyError(f"{path.name}: design {design.id} has no part {part!r}")
         entries[part] = entry
     materials = {part: _material(part, e, materials_dir) for part, e in entries.items()}
+    for part, pm in materials.items():
+        entry = entries[part] if isinstance(entries[part], dict) else {}
+        if not pm.is_sheet:
+            if "matrix" in entry or "stiffness_scale" in entry:
+                raise StudyError(f"{path.name}: [materials] {part}: matrix and stiffness_scale "
+                                 f"apply to sheet materials only")
+            continue
+        dp = design.part(part)
+        if not dp.layer_thickness_mm:
+            raise StudyError(f"{path.name}: sheet material {pm.material.id} on part {part!r}, "
+                             f"which has no layer_thickness_mm in design {design.id}")
+        if "base" not in materials and "matrix" not in entry:
+            raise StudyError(f"{path.name}: [materials] {part}: give a matrix material")
+        pm.matrix = (_material(f"{part}.matrix", entry["matrix"], materials_dir)
+                     if "matrix" in entry else materials["base"])
+        if pm.matrix.is_sheet:
+            raise StudyError(f"{path.name}: [materials] {part}: the matrix must be a solid")
+        pm.stiffness_scale = float(entry.get("stiffness_scale", 1.0))
+        if pm.stiffness_scale <= 0:
+            raise StudyError(f"{path.name}: [materials] {part}: stiffness_scale must be > 0")
+        pm.layer = {"thickness_mm": float(dp.layer_thickness_mm),
+                    "warp_axis": dp.warp_axis or "x", "weft_axis": dp.weft_axis or "y"}
 
     load = LoadCase(**raw.get("load", {}))
     if load.case not in LOAD_CASES:

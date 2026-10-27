@@ -272,7 +272,9 @@ Findings:
 
 Material: Ecoflex 00-30, fit 0 (Yeoh, Liao et al. 2020) for the baseline. Variants add Dragon Skin 20, fit 0 (1-term Ogden, library refit of Marechal et al. 2021 data), as base or throughout, see [Material profiles used](#material-profiles-used).
 
-`studies/compare/sw6_blocked_eco30_meshA.toml`: Ecoflex 00-30, mesh A (relative accuracy only, about 8% stiff), half model, contact on. The whole tip face is held in z (the bend direction) but is free to slide along the finger and to rotate, like a fingertip resting on a load cell. The blocked force is the reaction on that face.
+`studies/compare/sw6_blocked_eco30_meshA.toml`: Ecoflex 00-30, mesh A (relative accuracy only, about 8% stiff), half model, contact on. The whole tip face is held in z (the bend direction) and is free to slide along the finger. The blocked force is the reaction on that face.
+
+**Correction (2026-10-26):** this hold is not a free pin. Holding every tip-face node in z also resists rotation: the reactions carry a moment of 1.43 N·mm about the tip centroid at 5 kPa, against F × L ≈ 1.9 N·mm. The face still rotates (24° at 5 kPa), but against that moment. So the absolute forces below sit somewhere between a pinned and a clamped tip, and a true point contact (a fingertip on a load cell) may read higher. The **relative** comparisons between variants still hold, because every variant used the same hold. A point-contact run is queued (FEM-C1 in the real-time sim plan).
 
 | Pressure (kPa) | Blocked tip force (N) | Tip-face rotation (°) | Cavity volume increase |
 | --- | --- | --- | --- |

@@ -1,0 +1,76 @@
+# Woven cotton fabric (plain weave, medium weight) cast into the silicone base as
+# a strain-limiting layer. A SHEET card (kind = "sheet"): it describes the
+# fabric's in-plane tension per unit width, not a bulk solid. A study puts it
+# on a layer part (e.g. "cloth" in the pn_cloth_* designs) with a matrix
+# silicone that impregnates it; see simulation/core/materials.py for the
+# canonical law and backends/febio/materials.py for the FEBio mapping.
+#
+# Behaviour modelled: nearly inextensible in tension along the warp (finger
+# axis, x) and weft (width, y); no compressive stiffness (the yarns buckle, so
+# only the matrix resists); no bending stiffness of its own; in-plane shear only
+# through the matrix (woven fabric trellises freely at small shear angles).
+id = "fabric_woven_cotton"
+name = "Woven cotton fabric, plain weave ~190 g/m^2 (raw cotton, e.g. calico or canvas-weight muslin)"
+family = "fabric"
+kind = "sheet"
+density_kg_m3 = 1520                   # cotton fibre; unused in static runs (the layer uses the matrix density)
+
+[datasheet]
+fibre = "100% cotton"
+weave = "plain (\"linen\") weave"
+areal_mass_g_m2 = 192
+yarn_count_tex = "warp 30, weft 20"
+yarn_density_per_cm = "warp 31, weft 23"
+breaking_force_N_per_50mm = "warp 201, weft 158"
+elongation_at_break_pct = "warp 6.9, weft 7.2"
+source = "Djordjevic S., Krstic R., Kodric M., Djordjevic D. (2023), Analysis of breaking characteristics of cotton fabrics of the most frequent weaves, Annals of the University of Oradea, Fascicle of Textiles, Leatherwork 24(1):35-40, Tables 1-3, Fig. 1, Table 5 (linen weave). Strip test to SRPS ISO 5081, mean of 10 specimens"
+url = "https://textile.webhost.uoradea.ro/Annals/Vol%2024%20no%201-2023/art%20531%20pag%2035-40.pdf"
+
+[purchase]
+kit_size = "Not priced. Any plain-woven cotton (calico, muslin, quilting cotton) or polyester fabric"
+checked = "2026-10-26"
+notes = "Fabric store or old shirt. The operator has not chosen a fabric; heavier or synthetic weaves are stiffer, see the sensitivity factors in the fit notes."
+
+[[fits]]
+model = "fabric_pow_linear"
+stiffness_N_per_mm = 15.0              # warp (finger axis): linear-region dT/dlam per unit width
+stiffness_weft_N_per_mm = 10.0         # weft (across the finger)
+toe_stretch = 1.005                    # lam0: a short toe that smooths the tension-only switch
+toe_exponent = 3.0                     # beta: toe slope rises from 0, so the tangent is continuous at lam = 1
+thickness_mm = 0.45                    # real fabric, estimated (not measured in the source)
+areal_mass_g_m2 = 192
+test = "uniaxial strip tension, 50 mm wide strips (ISO 5081 strip method), raw fabric, not impregnated"
+stretch_range = [1.0, 1.03]
+source = "Secant stiffness of the linen-weave curves in Djordjevic et al. 2023 (Table 5 polynomial fits, Fig. 1) over the first 2% strain, where the finger loads the fabric. Not a published coefficient set"
+confidence = "low"
+notes = '''Where the numbers come from. Djordjevic et al. 2023 give 4th-order polynomial fits F(eps) of the strip-test curves, F in N per 50 mm strip, eps in %. Linen (plain) weave: warp F = -0.04 + 18.18 e - 16.31 e^2 + 5.94 e^3 - 0.48 e^4; weft F = 0.70 + 7.20 e - 5.39 e^2 + 2.57 e^3 - 0.21 e^4. Divided by the 50 mm strip width (the ISO 5081 width, assumed: the paper does not restate it), the tension per width T (N/mm) is:
+
+  strain        0.5%   1%     2%     3%     5%
+  warp T        0.114  0.147  0.219  0.585  2.51
+  weft T        0.051  0.083  0.201  0.509  1.83
+  warp secant   23     15     11     20     50   N/mm
+  weft secant   10      8     10     17     37   N/mm
+
+The curve has a de-crimping region to about 2.5% strain (the paper: "after 2.5% elongation there is a sudden increase"), then a stiff linear region with tangent 80-120 N/mm (warp) and 60-80 N/mm (weft) up to break at about 7%.
+
+Load the finger puts on the fabric: the cavity pressure on a chamber's end wall gives an axial pull N = p A, A = 11 x 13 = 143 mm^2, so 0.7 N at 5 kPa, spread over the 13 mm wide layer: about 0.05 N/mm, and a few times that with the bending moment's share. That is 0.05-0.3 N/mm, all inside the first 2% of the curve. So the card uses the secant over 0-2%: warp 15 N/mm, weft 10 N/mm, as a linear law with a short toe (lam0 = 1.005, beta = 3). Strain at a given tension, card law vs data (warp / weft): T = 0.05 N/mm, 0.58 / 0.75% vs 0.16 / 0.48%; 0.1 N/mm, 0.92 / 1.25% vs 0.40 / 1.23%; 0.2 N/mm, 1.58 / 2.25% vs 1.88 / 2.00%; 0.3 N/mm, 2.25 / 3.25% vs 2.34 / 2.42%. Above about 2.5% the real fabric is 4-8x stiffer than this law, so the law under-predicts the fabric's effect when it is loaded harder (conservative).
+
+For comparison, the Ecoflex 00-30 base itself is 4 mm x 3 mu0 = 4 x 0.075 = 0.30 N/mm per unit width in tension, so even this soft fabric is 30-50x stiffer than the whole base.
+
+Why low confidence: one lab, one raw (unfinished) fabric, uniaxial strip tests only. The de-crimping toe depends on pretension and seating in the grips. Cast into silicone, the matrix locks the crimp and should stiffen the toe, so the true in-finger stiffness probably lies between this secant (10-15 N/mm) and the linear region (60-120 N/mm). Run studies at stiffness_scale 0.25 and 5-8 to bracket it. The tension-only switch, the toe, and the absence of bending stiffness matter more than the exact S, as long as S >> 0.3 N/mm.
+
+Convention: S = dT/dlam in the linear region, T nominal tension per unit reference width. Warp lies along the design's warp_axis (finger axis x) and weft along weft_axis (y).'''
+
+[[fits]]
+model = "fabric_pow_linear"
+stiffness_N_per_mm = 100.0             # warp: tangent of the linear region (80-120 N/mm)
+stiffness_weft_N_per_mm = 70.0         # weft (60-80 N/mm)
+toe_stretch = 1.001                    # crimp locked by the impregnating silicone
+toe_exponent = 3.0
+thickness_mm = 0.45
+areal_mass_g_m2 = 192
+test = "uniaxial strip tension, 50 mm wide strips (ISO 5081 strip method), raw fabric, not impregnated"
+stretch_range = [1.0, 1.07]
+source = "Linear-region tangent of the linen-weave curves in Djordjevic et al. 2023 (Table 5 polynomials, 2.5-6% strain). Not a published coefficient set"
+confidence = "low"
+notes = '''Stiff bound, for sensitivity runs. It assumes the cast silicone locks the yarn crimp so the fabric acts with its post-crimp (linear-region) stiffness from zero strain, and a 0.1% toe only to keep the tension-only switch smooth. Tangents of the Table 5 polynomials (N per 50 mm strip / 50 mm): warp 58 N/mm at 3%, 121 N/mm at 5%; weft 43 N/mm at 3%, 82 N/mm at 5%. With fit 0 (secant 0-2%, 15 / 10 N/mm, 0.5% toe) it brackets the in-finger fabric.'''

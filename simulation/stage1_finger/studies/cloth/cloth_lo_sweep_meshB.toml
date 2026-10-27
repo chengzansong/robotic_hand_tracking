@@ -1,0 +1,30 @@
+# Overnight 1: cloth finger (low placement) free sweep 0-5 kPa. Baseline: eco30_sweep_10kPa/20261020T121529Z (same mesh and levels).
+# pn_cloth_lo: cloth layer z = 0..1 mm (flush with the underside, in the compressed zone), 1 mm effective thickness, inset 1 mm at the sides.
+# Mesh B (3 / 1.0 mm), the results mesh (within ~1.5% of the finest at 1 kPa, SW-4).
+# Regenerate cloth designs first: python -m simulation.models.tools.make_pneunet --cloth-variants
+name = "cloth_lo_sweep_meshB"
+design = "pn_cloth_lo"
+backend = "febio"
+bulk_to_shear = 100.0
+[mesh]
+size_mm = 3.0
+wall_size_mm = 1.0
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+cloth = { material = "fabric_woven_cotton" }          # fit 0 (nominal), matrix = base silicone
+[load]
+case = "free"
+levels_kPa = [0.5, 1, 2, 3, 4, 5]

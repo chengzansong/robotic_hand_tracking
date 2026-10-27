@@ -1,0 +1,27 @@
+# Overnight 2: baseline blocked tip force on mesh B (only mesh A existed), for the GIF and the headline force ratio.
+# Mesh B (3 / 1.0 mm), the results mesh (within ~1.5% of the finest at 1 kPa, SW-4).
+name = "sw6_blocked_eco30_meshB"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0
+[mesh]
+size_mm = 3.0
+wall_size_mm = 1.0
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+[load]
+case = "blocked_force"
+levels_kPa = [0.5, 1, 2, 3, 4, 5]

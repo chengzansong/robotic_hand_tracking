@@ -55,6 +55,9 @@ class MeshSpec:
     optimize_netgen: bool = True     # raises the worst-element quality noticeably
     symmetry: str = ""               # "" (full model) or "half_y" (cut at the y mid-plane)
     wall_elems: float = 0.0          # > 0: wall size = min(wall_size_mm, thinnest wall / wall_elems)
+    # Target size inside named parts, e.g. {"cloth": 1.0} for a thin layer; the
+    # smaller of this and the wall-refinement field applies there. Empty = off.
+    part_size_mm: dict = None
 
 
 def thinnest_wall_mm(design):
@@ -289,7 +292,9 @@ def _fragment(gmsh, vols, owner_of, overlap_owner):
     return owner, report
 
 
-def _size_field(gmsh, cavity, spec, wall_size_mm):
+def _size_field(gmsh, cavity, spec, wall_size_mm, part_vols=None):
+    """Wall-refinement threshold field, plus a constant size inside the parts
+    of `part_vols` ({size_mm: [volume tags]}), combined by Min."""
     f_dist = gmsh.model.mesh.field.add("Distance")
     gmsh.model.mesh.field.setNumbers(f_dist, "SurfacesList", cavity)
     gmsh.model.mesh.field.setNumber(f_dist, "Sampling", 20)
@@ -299,7 +304,20 @@ def _size_field(gmsh, cavity, spec, wall_size_mm):
     gmsh.model.mesh.field.setNumber(f_th, "SizeMax", spec.size_mm)
     gmsh.model.mesh.field.setNumber(f_th, "DistMin", 0.0)
     gmsh.model.mesh.field.setNumber(f_th, "DistMax", spec.wall_distance_mm)
-    gmsh.model.mesh.field.setAsBackgroundMesh(f_th)
+    fields = [f_th]
+    for size, vols in (part_vols or {}).items():
+        f_c = gmsh.model.mesh.field.add("Constant")
+        gmsh.model.mesh.field.setNumber(f_c, "VIn", size)
+        gmsh.model.mesh.field.setNumber(f_c, "VOut", spec.size_mm)
+        gmsh.model.mesh.field.setNumbers(f_c, "VolumesList", vols)
+        gmsh.model.mesh.field.setNumber(f_c, "IncludeBoundary", 1)
+        fields.append(f_c)
+    if len(fields) > 1:
+        f_min = gmsh.model.mesh.field.add("Min")
+        gmsh.model.mesh.field.setNumbers(f_min, "FieldsList", fields)
+        gmsh.model.mesh.field.setAsBackgroundMesh(f_min)
+    else:
+        gmsh.model.mesh.field.setAsBackgroundMesh(f_th)
     for opt in ("MeshSizeFromPoints", "MeshSizeFromCurvature", "MeshSizeExtendFromBoundary"):
         gmsh.option.setNumber(f"Mesh.{opt}", 0)
     gmsh.option.setNumber("Mesh.MeshSizeMax", spec.size_mm)
@@ -392,7 +410,14 @@ def build_mesh(design, spec=MeshSpec(), out_dir=None):
                 gmsh.model.addPhysicalGroup(2, ents, name=name)
 
         wall_size = resolve_wall_size(design, spec)
-        _size_field(gmsh, groups["cavity"], spec, wall_size)
+        part_vols = {}
+        for part, size in (spec.part_size_mm or {}).items():
+            if part not in part_volumes:
+                raise ValueError(f"mesh part_size_mm names part {part!r}; design {design.id} "
+                                 f"has {sorted(part_volumes)}")
+            part_vols.setdefault(float(size), []).extend(
+                v for v, p in volume_owner.items() if p == part)
+        _size_field(gmsh, groups["cavity"], spec, wall_size, part_vols)
         gmsh.model.mesh.generate(3)
         gmsh.model.mesh.setOrder(spec.order)
         if out_dir is not None:

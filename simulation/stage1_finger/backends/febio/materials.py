@@ -83,3 +83,87 @@ def febio_initial_shear_MPa(mtype, params):
         # d2W gives mu0 = sum c_i / 2 for W = sum c_i/m_i^2 (...)
         return sum(v for k, v in params.items() if k.startswith("c")) / 2
     raise UnsupportedMaterial(mtype)
+
+
+# --- Sheet reinforcement (cast-in fabric) ------------------------------------
+#
+# A sheet card (kind = "sheet", model "fabric_pow_linear") on a layer part of
+# modelled thickness t becomes a coupled FEBio "solid mixture" of
+#   - the matrix silicone as a coupled "neo-Hookean" (E, v) with the matrix
+#     fit's initial shear modulus mu0 and bulk modulus K (same K rule as the
+#     uncoupled cards: card value, else Poisson, else bulk_to_shear * mu0);
+#   - one "fiber-pow-linear" family along the warp axis and one along the weft
+#     axis, tension only (FEBio skips a fibre with I_n < 1).
+# Coupled, not uncoupled: an uncoupled fibre sees only the deviatoric stretch
+# J^-1/3 lam, so with fibres much stiffer than the bulk modulus the layer could
+# stretch by dilating, capped near 9 K whatever the fibre modulus. The coupled
+# fibre uses the true stretch.
+#
+# FEBio 4.13 fiber-pow-linear (FEBioMech/FEFiberPowLinear.cpp), fibre invariant
+# I = lam^2 along the reference direction n0, Kirchhoff fibre stress tau = J sigma_n:
+#   toe    (1 <= I < I0): tau = 2 I ksi (I - 1)^(beta - 1)
+#   linear (I >= I0):     tau = 2 b I - E sqrt(I)
+#   ksi = E / (4 (beta - 1)) I0^(-3/2) (I0 - 1)^(2 - beta),  I0 = lam0^2
+#   b   = ksi (I0 - 1)^(beta - 1) + E / (2 sqrt(I0))
+# The nominal stress along the fibre, P = tau / lam, is then linear in lam past
+# lam0 with slope dP/dlam = 2 b = E c, c = 1/lam0 + (lam0^2 - 1) / (2 (beta - 1) lam0^3).
+# A layer of thickness t carries T = t P per unit width, so the card's
+# linear-region stiffness per width S = dT/dlam gives E = S / (t c).
+
+SHEET_MODELS = ("fabric_pow_linear",)
+AXIS_VEC = {"x": (1.0, 0.0, 0.0), "y": (0.0, 1.0, 0.0), "z": (0.0, 0.0, 1.0)}
+
+
+def fiber_pow_linear_c(lam0, beta):
+    """dP/dlam in the linear region divided by FEBio's E."""
+    return 1.0 / lam0 + (lam0 ** 2 - 1) / (2 * (beta - 1) * lam0 ** 3)
+
+
+def fiber_pow_linear_nominal(lam, E, lam0, beta):
+    """Nominal (1st Piola-Kirchhoff) fibre stress P(lam) of FEBio's
+    fiber-pow-linear, in the units of E; zero for lam <= 1 (tension only)."""
+    import numpy as np
+    lam = np.asarray(lam, float)
+    I, I0 = lam ** 2, lam0 ** 2
+    ksi = E / 4 / (beta - 1) * I0 ** -1.5 * (I0 - 1) ** (2 - beta)
+    b = ksi * (I0 - 1) ** (beta - 1) + E / 2 / np.sqrt(I0)
+    tau = np.where(I < I0, 2 * I * ksi * np.clip(I - 1, 0, None) ** (beta - 1),
+                   2 * b * I - E * np.sqrt(I))
+    return np.where(I > 1, tau / lam, 0.0)
+
+
+def coupled_neo_hookean(fit, bulk_to_shear):
+    """(E, v) in MPa for FEBio's coupled "neo-Hookean" with the fit's mu0 and K."""
+    mu = fit.initial_shear_modulus_kPa() * KPA_TO_MPA
+    k_kPa, k_source = bulk_modulus_kPa(fit, bulk_to_shear)
+    K = k_kPa * KPA_TO_MPA
+    E = 9 * K * mu / (3 * K + mu)
+    v = (3 * K - 2 * mu) / (2 * (3 * K + mu))
+    return {"E": E, "v": v}, k_source
+
+
+def febio_sheet_mixture(sheet_fit, matrix_fit, thickness_mm, warp_axis="x", weft_axis="y",
+                        stiffness_scale=1.0, bulk_to_shear=100.0):
+    """FEBio "solid mixture" for a sheet cast into a matrix, as
+    (type, [(constituent type, {param: value}), ...], info)."""
+    if sheet_fit.model not in SHEET_MODELS:
+        raise UnsupportedMaterial(f"no FEBio sheet mapping for {sheet_fit.model!r}")
+    if not thickness_mm or thickness_mm <= 0:
+        raise ValueError("sheet layer needs a positive modelled thickness")
+    p = sheet_fit.params
+    lam0, beta = float(p["toe_stretch"]), float(p["toe_exponent"])
+    c = fiber_pow_linear_c(lam0, beta)
+    matrix, k_source = coupled_neo_hookean(matrix_fit, bulk_to_shear)
+    parts = [("neo-Hookean", matrix)]
+    info = {"matrix_E_MPa": matrix["E"], "matrix_v": matrix["v"], "matrix_k_source": k_source,
+            "thickness_mm": thickness_mm, "stiffness_scale": stiffness_scale, "c": c}
+    for name, S, axis in zip(("warp", "weft"), sheet_fit.warp_weft_N_per_mm(),
+                             (warp_axis, weft_axis)):
+        S = S * stiffness_scale
+        E = S / (thickness_mm * c)
+        parts.append(("fiber-pow-linear", {"E": E, "beta": beta, "lam0": lam0,
+                                           "fiber": ",".join(f"{v:g}" for v in AXIS_VEC[axis])}))
+        info[f"{name}_N_per_mm"] = S
+        info[f"{name}_fiber_E_MPa"] = E
+        info[f"{name}_axis"] = axis
+    return "solid mixture", parts, info

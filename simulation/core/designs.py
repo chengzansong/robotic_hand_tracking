@@ -17,6 +17,11 @@ class Part:
     step: Path
     role: str
     default_material: str
+    # Strain-limiting sheet parts only (e.g. a cast-in fabric layer): the
+    # modelled (effective) thickness and the in-plane warp / weft axes.
+    layer_thickness_mm: float | None = None
+    warp_axis: str | None = None
+    weft_axis: str | None = None
 
 
 @dataclass
@@ -60,6 +65,9 @@ def load_design(design_id, models_dir=MODELS_DIR):
             step=directory / p["step"],
             role=p.get("role", ""),
             default_material=p["default_material"],
+            layer_thickness_mm=p.get("layer_thickness_mm"),
+            warp_axis=p.get("warp_axis"),
+            weft_axis=p.get("weft_axis"),
         )
         for p in raw["parts"]
     ]

@@ -1,0 +1,30 @@
+# Cloth smoke solve: woven cotton layer at z = 2..3 mm (pn_cloth_hi), Ecoflex 00-30 top and base.
+# Mesh A (4 / 1.5 mm) reads ~8% stiff (SW-4): compare with cmp_eco30_meshA (42 / 93 deg at 1 / 2 kPa).
+# Run with --no-estimate --timeout-s 900 (probe: 505 s for 1 kPa, 2026-10-27).
+# Regenerate the design first: python -m simulation.models.tools.make_pneunet --cloth-variants
+name = "cloth_hi_smoke_meshA"
+design = "pn_cloth_hi"
+backend = "febio"
+bulk_to_shear = 100.0
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 8                 # 8, not 2: the probe failed twice at dt = 0.5 and 0.25 kPa first; solver setting only
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+cloth = { material = "fabric_woven_cotton" }   # matrix defaults to the base silicone
+[load]
+case = "free"
+levels_kPa = [1, 2]
