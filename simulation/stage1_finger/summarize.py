@@ -20,6 +20,7 @@ import numpy as np
 from .analysis.curvature import turn_radius_sweep
 from .mesh.fe_mesh import FEMesh
 from .run import OUTPUTS_DIR
+from .study import BLOCKED_CASES
 
 MESH_NAMES = {(4.0, 1.5): "A", (3.0, 1.0): "B", (2.5, 0.8): "C"}
 
@@ -141,7 +142,7 @@ def plot_compare(studies, out_path, root=OUTPUTS_DIR):
             continue
         _, levels = run_rows(runs[-1].parent)
         p = [r["pressure_kPa"] for r in levels]
-        if levels and levels[0]["case"] == "blocked_force":
+        if levels and levels[0]["case"] in BLOCKED_CASES:
             axs[2].plot(p, [1000 * r["blocked_force_N"] for r in levels], "o-", label=name)
             continue
         axs[0].plot(p, [r["bend_deg"] for r in levels], "o-", label=name)

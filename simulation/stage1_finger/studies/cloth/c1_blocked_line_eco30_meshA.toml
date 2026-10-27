@@ -1,0 +1,31 @@
+# FEM-C1 blocked tip force, line support: only the underside corner line of the tip face is held
+# in z, so the tip is free to rotate and to slide in x (a fingertip on a load cell). Otherwise
+# identical to sw6_blocked_eco30_meshA, which holds the whole tip face in z. Half model, so the
+# full force is 2x the logged reaction. Decides Cal-A vs Cal-B (plans/2026-10-26_realtime-sim-plan.md 4.3).
+# Mesh A (4 / 1.5 mm) reads ~8% stiff (SW-4): compare against sw6_blocked_eco30_meshA, not absolute.
+# 12 threads so two runs can share the CPU.
+name = "c1_blocked_line_eco30_meshA"
+design = "finger_poc"
+backend = "febio"
+bulk_to_shear = 100.0
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 12
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+[load]
+case = "blocked_line"
+levels_kPa = [1, 2, 3, 4, 5]

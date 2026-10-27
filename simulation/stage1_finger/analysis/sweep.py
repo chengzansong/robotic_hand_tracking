@@ -11,7 +11,9 @@ Logged reactions come from the half and are doubled in x and z; y cancels.
 Blocked force: FEBio 4.13 logs the nodal reaction R as the force the body
 exerts on the support (checked 2026-10-20 on the single-tet10 tension test,
 where the held x = 0 face logs +x). So blocked_force_N = R_tip . b, positive
-when the finger pushes toward its bend side b.
+when the finger pushes toward its bend side b. The same holds for the
+blocked_line case: only the support-line nodes carry reactions there, and the
+tip log sums the whole face.
 """
 
 import numpy as np
@@ -54,7 +56,7 @@ def sweep_rows(mesh, times, u, raw_steps, load, axis="x", bend_toward="-z",
         row["curl"] = curl_flags(full, x, row["bend_angle_deg"], axis=ax)
         row["tip_reaction_N"] = _full_reaction(raw.get("tip_reaction_N"), half)
         row["clamp_reaction_N"] = _full_reaction(raw.get("clamp_reaction_N"), half)
-        if load.case == "blocked_force":
+        if load.blocked:
             r = row["tip_reaction_N"]
             row["blocked_force_N"] = float(np.asarray(r) @ b) if r is not None else 0.0
         rows.append(row)

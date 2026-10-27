@@ -24,7 +24,9 @@ Format (see studies/*.toml):
     symmetry = ""                      # "" or "half_y" (half model, y mid-plane)
 
     [load]
-    case = "free"                      # free | blocked_force
+    case = "free"                      # free | blocked_force | blocked_line
+                                       # blocked_force holds the whole tip face along the
+                                       # bend axis; blocked_line only its bend-side edge
     pressure_kPa = 20.0                # max chamber gauge pressure
     steps = 10                         # output points, evenly spaced in pressure
     # or explicit output levels (then pressure_kPa and steps are ignored):
@@ -46,7 +48,8 @@ from simulation.core.materials import MATERIALS_DIR, list_materials, load_materi
 
 from .mesh import MeshSpec
 
-LOAD_CASES = ("free", "blocked_force")
+LOAD_CASES = ("free", "blocked_force", "blocked_line")
+BLOCKED_CASES = ("blocked_force", "blocked_line")    # tip held; blocked_force_N reported
 
 
 class StudyError(ValueError):
@@ -98,6 +101,10 @@ class LoadCase:
         if self.levels_kPa:
             return [float(p) for p in self.levels_kPa]
         return [self.pressure_kPa * k / self.steps for k in range(1, self.steps + 1)]
+
+    @property
+    def blocked(self):
+        return self.case in BLOCKED_CASES
 
     @property
     def max_kPa(self):

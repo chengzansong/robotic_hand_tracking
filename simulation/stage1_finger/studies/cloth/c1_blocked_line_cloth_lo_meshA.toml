@@ -1,0 +1,33 @@
+# FEM-C1 on the cloth (lo) design: blocked tip force 1-5 kPa with a line support, only the
+# underside corner line of the tip face held in z (free to rotate and slide in x). Otherwise
+# identical to cloth_lo_blocked_meshA, which holds the whole tip face in z.
+# pn_cloth_lo: cloth layer z = 0..1 mm (flush with the underside, in the compressed zone), 1 mm effective thickness, inset 1 mm at the sides.
+# Mesh A (4 / 1.5 mm) reads ~8% stiff (SW-4): relative comparisons only, against the mesh A
+# baselines cmp_eco30_meshA (free) and c1_blocked_line_eco30_meshA (line support).
+# Regenerate cloth designs first: python -m simulation.models.tools.make_pneunet --cloth-variants
+name = "c1_blocked_line_cloth_lo_meshA"
+design = "pn_cloth_lo"
+backend = "febio"
+bulk_to_shear = 100.0
+[mesh]
+size_mm = 4.0
+wall_size_mm = 1.5
+wall_distance_mm = 2.0
+symmetry = "half_y"
+[contact]
+enabled = true
+fric_coeff = 0.0
+[solver]
+max_ups = 0
+substeps = 2
+aggressiveness = 1
+threads = 24
+symmetric_stiffness = "non-symmetric"
+pressure_symmetric = false
+[materials]
+top = "ecoflex_00-30"
+base = "ecoflex_00-30"
+cloth = { material = "fabric_woven_cotton" }          # fit 0 (nominal), matrix = base silicone
+[load]
+case = "blocked_line"
+levels_kPa = [1, 2, 3, 4, 5]
