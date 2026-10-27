@@ -26,7 +26,7 @@ simulation/
   local.toml       machine paths such as the FEBio executable (not in git)
 ```
 
-Swapping parts happens in configuration files, not code. A **study** (a TOML file in `stage1_finger/studies/`) names a design, a material and fit for each part, the mesh size, the pressure levels, contact, and solver settings.
+Swapping parts happens in configuration files, not code. A **study** (a TOML file in `stage1_finger/studies/`) names a design, a material and fit for each part, the mesh size, the pressure levels, contact, and solver settings. A part given as just a card name, such as `"ecoflex_00-30"`, uses fit 0, the default fit. The fits of each card are listed in [materials/README.md](materials/README.md#fits-at-a-glance).
 
 | To add | Do this |
 | --- | --- |
@@ -97,4 +97,4 @@ Configuration files use explicit unit suffixes (`_kPa`, `_mm`). Solvers work in 
 
 ## Status and results
 
-See [docs/experiments.md](docs/experiments.md). It covers the install check, contact, solver tuning, mesh convergence, the Ecoflex 00-30 pressure sweep, a first Ecoflex 00-50 comparison, and the planned next experiments.
+See [docs/experiments.md](docs/experiments.md). It covers the install check, contact, solver tuning, mesh convergence, the Ecoflex 00-30 pressure sweep (fit 0 of `ecoflex_00-30`, Yeoh, Liao et al. 2020), a first Ecoflex 00-50 comparison (fit 0 of `ecoflex_00-50`, Yeoh, Liao et al. 2020), and the planned next experiments. The blocked-force and design comparisons add Dragon Skin 20 (fit 0 of `dragon_skin_20`, Ogden, library refit of Marechal et al. 2021 data). The first solves (SW-1 to SW-3) used a placeholder neo-Hookean material. The card, fit, model, coefficients and source behind every reported result are in [Material profiles used](docs/experiments.md#material-profiles-used).

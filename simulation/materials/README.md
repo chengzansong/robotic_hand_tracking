@@ -61,13 +61,41 @@ When a paper uses another convention, convert it into this one and say so in `no
 
 ## State of the library (2026-10-19)
 
-Eight cards: Ecoflex 00-10, 00-20, 00-30, 00-50; Dragon Skin 10, 20, 30; Elastosil M4601. All Smooth-On grades cost $33–39 per 2 lb Trial Unit. Each card has three kinds of fit, which bracket the real stiffness:
+Eight cards: Ecoflex 00-10, 00-20, 00-30, 00-50; Dragon Skin 10, 20, 30; Elastosil M4601. All Smooth-On grades cost $33–39 per 2 lb Trial Unit. Most cards have three kinds of fit, which bracket the real stiffness:
 
-1. **Default:** the best-supported fit. For Ecoflex it is a Yeoh fit converted from Liao et al. 2020. For Dragon Skin it is our Ogden refit of the Marechal et al. 2021 raw data.
-2. **Alternate:** an Ogden or Yeoh refit, labelled `low`. The Ecoflex Ogden refits are probably too soft, because the source measured strain from crosshead travel.
-3. **Datasheet neo-Hookean** (`mu = P_100 / 1.75`): a common basis across grades.
+1. **Default (fit 0):** the best-supported fit. For Ecoflex 00-10, 00-30 and 00-50 it is a Yeoh fit converted from Liao et al. 2020. For Ecoflex 00-20 it is the same Shore-law model, predicted rather than measured by Liao et al., so it is `low`. For Dragon Skin it is our Ogden refit of the Marechal et al. 2021 raw data. For Elastosil M4601 it is the Yeoh fit of Wang et al. 2018, the only fit on that card.
+2. **Alternate:** an Ogden or Yeoh refit, labelled `low` (Ecoflex 00-10, 00-30 and 00-50 have an Ogden refit; Dragon Skin has a Yeoh refit). The Ecoflex Ogden refits are probably too soft, because the source measured strain from crosshead travel. Ecoflex 00-20 and Elastosil M4601 have no alternate.
+3. **Datasheet neo-Hookean** (`mu = P_100 / 1.75`): a common basis across grades. Every card has one except Elastosil M4601.
 
-Stiffness for one grade spreads 2–4× across these sources. Run Stage 1 studies across all three fits, and treat our own dogbone tests (bench plan P0.3) as the tie-breaker. Marechal et al. 2021 Table III coefficients are **not** used; each card's header explains why.
+Stiffness for one grade spreads 2–4× across these sources. Run Stage 1 studies across the fits of a card, and treat our own dogbone tests (bench plan P0.3) as the tie-breaker. Marechal et al. 2021 Table III coefficients are **not** used; each card's header explains why.
+
+### Fits at a glance
+
+mu0 is the initial shear modulus the fit implies (Yeoh 2 C10, Ogden sum of mu_i, neo-Hookean mu), from `core/materials.py`. Fit 0 is the default. Results reported so far used fit 0 of `ecoflex_00-30`, `ecoflex_00-50` and `dragon_skin_20` (see [Material profiles used](../docs/experiments.md#material-profiles-used)).
+
+| Card | Fit | Model | mu0 (kPa) | Confidence | Source |
+| --- | --- | --- | --- | --- | --- |
+| [dragon_skin_10](dragon_skin_10.toml) | 0 | Ogden | 44.4 | medium | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [dragon_skin_10](dragon_skin_10.toml) | 1 | Yeoh | 52.7 | low | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [dragon_skin_10](dragon_skin_10.toml) | 2 | neo-Hookean | 86.7 | low | Smooth-On datasheet (100% modulus) |
+| [dragon_skin_20](dragon_skin_20.toml) | 0 | Ogden | 125 | medium | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [dragon_skin_20](dragon_skin_20.toml) | 1 | Yeoh | 148 | low | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [dragon_skin_20](dragon_skin_20.toml) | 2 | neo-Hookean | 193 | low | Smooth-On datasheet (100% modulus) |
+| [dragon_skin_30](dragon_skin_30.toml) | 0 | Ogden | 184 | medium | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [dragon_skin_30](dragon_skin_30.toml) | 1 | Yeoh | 212 | low | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [dragon_skin_30](dragon_skin_30.toml) | 2 | neo-Hookean | 339 | low | Smooth-On datasheet (100% modulus) |
+| [ecoflex_00-10](ecoflex_00-10.toml) | 0 | Yeoh | 11.2 | low | Liao, Hossain, Yao 2020, doi 10.1016/j.mechmat.2020.103366 |
+| [ecoflex_00-10](ecoflex_00-10.toml) | 1 | Ogden | 6.17 | low | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [ecoflex_00-10](ecoflex_00-10.toml) | 2 | neo-Hookean | 31.5 | low | Smooth-On datasheet (100% modulus) |
+| [ecoflex_00-20](ecoflex_00-20.toml) | 0 | Yeoh | 18.2 | low | Liao, Hossain, Yao 2020, doi 10.1016/j.mechmat.2020.103366 (Shore-law prediction) |
+| [ecoflex_00-20](ecoflex_00-20.toml) | 1 | neo-Hookean | 31.5 | low | Smooth-On datasheet (100% modulus) |
+| [ecoflex_00-30](ecoflex_00-30.toml) | 0 | Yeoh | 25.2 | medium | Liao, Hossain, Yao 2020, doi 10.1016/j.mechmat.2020.103366 |
+| [ecoflex_00-30](ecoflex_00-30.toml) | 1 | Ogden | 14.6 | low | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [ecoflex_00-30](ecoflex_00-30.toml) | 2 | neo-Hookean | 39.4 | low | Smooth-On datasheet (100% modulus) |
+| [ecoflex_00-50](ecoflex_00-50.toml) | 0 | Yeoh | 39.1 | medium | Liao, Hossain, Yao 2020, doi 10.1016/j.mechmat.2020.103366 |
+| [ecoflex_00-50](ecoflex_00-50.toml) | 1 | Ogden | 19.5 | low | Library refit of Marechal et al. 2021 raw data (doi 10.1089/soro.2019.0115) |
+| [ecoflex_00-50](ecoflex_00-50.toml) | 2 | neo-Hookean | 47.3 | low | Smooth-On datasheet (100% modulus) |
+| [elastosil_m4601](elastosil_m4601.toml) | 0 | Yeoh | 250 | low | Wang, Ge, Gu 2018, doi 10.1016/j.sna.2018.01.018 |
 
 ## Tools
 

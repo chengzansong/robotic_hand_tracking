@@ -44,7 +44,7 @@ From the repository root:
 
 Without FEBio configured, a run still meshes, writes `model.feb`, metadata, and `renders/mesh_tags.png`, then exits with code 2 and says how to set `febio_exe`. The FEBio uniaxial test is skipped.
 
-Each run writes `simulation/outputs/<study>/<UTC timestamp>/` (gitignored), containing `study.toml`, `mesh/` (`mesh.msh`, `mesh.vtu`, `mesh.npz`), `model.feb`, `metadata.json` (material fits and solver parameters used, mesh stats and quality, geometry findings, git commit), and, after a solve, `model.log`, the node_data logs, `results.json`, `displacements.npz`, `plots/`, and `renders/`.
+Each run writes `simulation/outputs/<study>/<UTC timestamp>/` (gitignored), containing `study.toml`, `mesh/` (`mesh.msh`, `mesh.vtu`, `mesh.npz`), `model.feb`, `metadata.json` (material fits and solver parameters used, mesh stats and quality, geometry findings, git commit), and, after a solve, `model.log`, the node_data logs, `results.json`, `displacements.npz`, `plots/`, and `renders/`. The fit behind each reported result is listed in [Material profiles used](../docs/experiments.md#material-profiles-used): `ecoflex_00-30` fit 0 (Yeoh, Liao et al. 2020), `ecoflex_00-50` fit 0 (Yeoh, Liao et al. 2020), `dragon_skin_20` fit 0 (Ogden, library refit of Marechal et al. 2021 data), and the placeholder for SW-1 to SW-3.
 
 ## Study format
 
@@ -53,8 +53,8 @@ design = "finger_poc"
 backend = "febio"
 bulk_to_shear = 100.0        # K / mu0 when the fit gives neither bulk_modulus_kPa nor poisson
 [materials]                  # per part; omitted parts use design defaults
-top = "ecoflex_00-30"                          # fit 0
-base = { material = "ecoflex_00-30", fit = 2 } # fit by index
+top = "ecoflex_00-30"                          # fit 0: Yeoh, Liao et al. 2020
+base = { material = "ecoflex_00-30", fit = 2 } # fit by index; fit 2 is the datasheet neo-Hookean
 [mesh]
 size_mm = 2.0
 wall_size_mm = 0.8           # refined size at the cavity walls
@@ -86,6 +86,8 @@ fric_coeff = 0.0             # also: penalty, auto_penalty, two_pass, laugon, se
 - Turn radius (free bending only): see `analysis/curvature.py`. A circle fit to the deformed base underside on the centre plane, over the chambered span, plus circularity, mean radius (arc length / bend), the curvature profile along the finger, and the underside length change. In `results.json` as `turn_radius`, plotted to `plots/turn_radius_sides.png` (dimensioned side views with reference objects) and `plots/turn_radius.png`.
 
 ## Solver tuning (2026-10-20, smoke mesh, placeholder material)
+
+Material: `_placeholder_neo_hookean`, fit 0, neo-Hookean, mu = 40 kPa. It is a placeholder, not a silicone fit.
 
 Full model, 42k nodes / 127k equations, 2 kPa in 4 levels, no contact, one change at a time from the first solve. Bend and dV agree to 4 significant figures in every row except T6.
 

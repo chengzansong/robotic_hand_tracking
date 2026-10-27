@@ -57,7 +57,7 @@ Press `Q` to close the webcam window. The model file is not in git and must sit 
 
 ### Run the simulation
 
-The simulation also needs the free FEBio solver, which is installed separately. Setup, running studies, and reproducing results are covered in [simulation/README.md](simulation/README.md). Results so far are in [simulation/docs/experiments.md](simulation/docs/experiments.md).
+The simulation also needs the free FEBio solver, which is installed separately. Setup, running studies, and reproducing results are covered in [simulation/README.md](simulation/README.md). Results so far are in [simulation/docs/experiments.md](simulation/docs/experiments.md). The material card, fit and source behind each result are in its [Material profiles used](simulation/docs/experiments.md#material-profiles-used) section.
 
 ### Tests
 

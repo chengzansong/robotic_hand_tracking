@@ -34,6 +34,23 @@ Run outputs (meshes, solver files, all renders) are written to `simulation/outpu
 
 ---
 
+## Material profiles used
+
+Every reported result used one of the four profiles below. The coefficients are copied from the card. The initial shear modulus is mu0 from `Fit.initial_shear_modulus_kPa()` in [../core/materials.py](../core/materials.py): Yeoh 2 C10, Ogden sum of mu_i, neo-Hookean mu. The bulk modulus K is what each run's `metadata.json` records for FEBio. For the three real fits it is the study's `bulk_to_shear` = 100 times mu0. For the placeholder it comes from the card's Poisson ratio. All solved runs used fit 0 of their card. A run's `metadata.json` lists the exact fit of each part (`materials.top` and `materials.base`).
+
+| Card | Fit | Model | Coefficients (from the card) | mu0 (kPa) | Bulk modulus K | Source | Used in |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [ecoflex_00-30](../materials/ecoflex_00-30.toml) | 0 | Yeoh | C10 = 12.58 kPa, C20 = 0.5759 kPa, C30 = 0.0 kPa | 25.2 | 2.516 MPa (100 x mu0) | Liao, Hossain, Yao 2020, Mechanics of Materials 144:103366, Table 2 (accepted pre-proof). DOI 10.1016/j.mechmat.2020.103366. Confidence medium | SW-4, SW-5, SW-6, Turn radius, Design comparison (top and base of the Ecoflex 00-30 baseline and the 16 mm tall variant; top of the Dragon Skin 20 base variants), SW-7 baseline |
+| [ecoflex_00-50](../materials/ecoflex_00-50.toml) | 0 | Yeoh | C10 = 19.54 kPa, C20 = 1.137 kPa, C30 = 0.0 kPa | 39.1 | 3.908 MPa (100 x mu0) | Liao, Hossain, Yao 2020, Mechanics of Materials 144:103366, Table 2 (accepted pre-proof). DOI 10.1016/j.mechmat.2020.103366. Confidence medium | SW-7, Design comparison (Ecoflex 00-50 throughout; `eco50_quick_meshA`) |
+| [dragon_skin_20](../materials/dragon_skin_20.toml) | 0 | Ogden, 1 term | mu1 = 125.0 kPa, alpha1 = 2.94 | 125 | 12.5 MPa (100 x mu0) | Fit by this library (2026-10-19) to the raw data of Marechal et al. 2021 (Zenodo 10.5281/zenodo.3611328, `Dragon Skin 20.csv`; paper DOI 10.1089/soro.2019.0115). Not a published coefficient set. Confidence medium | SW-6 and Design comparison (Dragon Skin 20 base, tall chambers plus Dragon Skin 20 base, Dragon Skin 20 throughout) |
+| [_placeholder_neo_hookean](../materials/_placeholder_neo_hookean.toml) | 0 | neo-Hookean | mu = 40.0 kPa, Poisson ratio 0.49 | 40.0 | 1.987 MPa (from Poisson ratio 0.49) | None. A placeholder of Ecoflex-like order of magnitude, for pipeline checks only. Confidence low | SW-1, SW-2, SW-3 |
+
+The placeholder is not a silicone fit. Its results show that the pipeline works. They are not material predictions.
+
+Fits that were not used in any reported result: fit 1 and fit 2 of every card, and all other cards. Stiffness across fits is compared in [../materials/README.md](../materials/README.md).
+
+---
+
 ## All results in one place
 
 Every design-relevant run, per pressure level. Mesh B is the accurate mesh; mesh A reads a few % stiff, so compare mesh A rows with the mesh A baseline. Column definitions are in [Turn radius](#turn-radius-how-tightly-the-finger-curls) and [SW-6](#sw-6-blocked-tip-force-first-result). To regenerate the full table for every run, including dev and tuning runs, run `python -m simulation.stage1_finger.summarize`. It writes `simulation/outputs/summary.md` and `summary.csv`.
@@ -82,7 +99,7 @@ Every design-relevant run, per pressure level. Mesh B is the accurate mesh; mesh
 
 - **Geometry:** `finger_poc`, from the Onshape CAD in [../models/finger_poc/](../models/finger_poc/). It is 112 × 15 × 19 mm, with 11 chambers (6 × 11 × 13 mm inside) on a 10 mm pitch, 1 mm walls between chambers, 2 mm gaps between walls, and a 4 mm base. The top and base are cast separately, with the top's lip and pegs pressed into the wet base, so the cured finger is one piece. The model keeps them as two bonded parts, so each can get its own material.
 - **Boundary conditions:** the proximal end (x = 0) is clamped. Pressure is applied to every internal cavity surface, rising slowly enough that each level is a static solution.
-- **Material:** hyperelastic cards from [../materials/](../materials/). Ecoflex 00-30 uses the default Yeoh fit (Liao et al. 2020).
+- **Material:** hyperelastic cards from [../materials/](../materials/). Ecoflex 00-30 uses the default Yeoh fit (fit 0, Liao et al. 2020). Every profile used is listed in [Material profiles used](#material-profiles-used).
 - **Mesh and contact:** quadratic tetrahedra, using the mirror symmetry of the finger (a half model), with frictionless contact between neighbouring chamber walls.
 
 ![Mesh with tagged surfaces: top body, base, clamped end, tip, cavity](images/finger_poc_mesh_tags.png)
@@ -94,9 +111,11 @@ Every design-relevant run, per pressure level. Mesh B is the accurate mesh; mesh
 - **SW-0.** A single quadratic tetrahedron stretched to 1.5× in FEBio matches the analytic neo-Hookean result to 0.06%. Its sideways shrinkage matches incompressibility (0.8167 vs 0.8165). This check is now a test: `simulation/tests/test_febio_uniaxial.py`.
   - **Found while doing it:** FEBio reports **zero reaction force** at nodes held with a "zero displacement" condition. The clamp and the blocked-force tip are therefore held with prescribed zero displacements, which do report forces.
   - **Reaction sign (checked later, in SW-6):** FEBio logs the force the body exerts on the support. The test asserts this.
-- **SW-1.** Placeholder material (μ = 40 kPa), 0–2 kPa: the bend reached 51° at 2 kPa. The renders showed neighbouring chamber walls bulging toward each other and nearly touching, which led to SW-2.
+- **SW-1.** Placeholder neo-Hookean material (μ = 40 kPa, not a silicone fit; see [Material profiles used](#material-profiles-used)), 0–2 kPa: the bend reached 51° at 2 kPa. The renders showed neighbouring chamber walls bulging toward each other and nearly touching, which led to SW-2.
 
 ## SW-2: chamber-wall contact
+
+Material: placeholder neo-Hookean, mu = 40 kPa (a placeholder, not a silicone fit), see [Material profiles used](#material-profiles-used).
 
 Contact is defined between the facing walls of all 10 gaps. After each solve, a check measures the gap between the paired walls and flags any overlap. Test case: placeholder material, 0.5–3 kPa.
 
@@ -117,6 +136,8 @@ Contact on, at 3 kPa. The walls meet over a patch with no overlap:
 
 ## SW-3: solver tuning
 
+Material: placeholder neo-Hookean, mu = 40 kPa (a placeholder, not a silicone fit), see [Material profiles used](#material-profiles-used).
+
 One change at a time, on a coarse test case. All of these kept the answer the same to 4 significant figures, except the half model (bend −0.2%, volume +0.5%).
 
 | Setting | Wall time |
@@ -133,6 +154,8 @@ One change at a time, on a coarse test case. All of these kept the answer the sa
 
 ## SW-4: mesh convergence
 
+Material: Ecoflex 00-30, fit 0 (Yeoh, Liao et al. 2020), see [Material profiles used](#material-profiles-used).
+
 Ecoflex 00-30, half model, contact on:
 
 | Mesh | Global / wall element size (mm) | Nodes (half model) | Bend at 1 kPa | Error vs finest |
@@ -146,6 +169,8 @@ Ecoflex 00-30, half model, contact on:
 - **Still to verify:** convergence at high pressure, where the walls balloon. In the high-pressure views, the 1 mm walls are only 1–2 elements thick.
 
 ## SW-5: Ecoflex 00-30 free bending, 0–5 kPa
+
+Material: Ecoflex 00-30, fit 0 (Yeoh, Liao et al. 2020), see [Material profiles used](#material-profiles-used).
 
 Run with: `studies/eco30_sweep_10kPa.toml` (mesh B, half model, contact on). It was set to 10 kPa but stopped at its 70-minute time limit just past 5 kPa. Every level up to 5 kPa converged.
 
@@ -191,6 +216,8 @@ Findings:
 
 ## SW-7 (first look): Ecoflex 00-50 vs 00-30
 
+Material: Ecoflex 00-50, fit 0 (Yeoh, Liao et al. 2020), against Ecoflex 00-30, fit 0 (Yeoh, Liao et al. 2020), see [Material profiles used](#material-profiles-used).
+
 A quick run on the coarse mesh A, so compare ratios, not absolute values (`studies/dev/eco50_quick_meshA.toml`).
 
 | Pressure (kPa) | 00-50 bend (°) | 00-30 bend (°), same mesh | Ratio |
@@ -206,6 +233,8 @@ A quick run on the coarse mesh A, so compare ratios, not absolute values (`studi
 ![Ecoflex 00-50 bending at 1, 2, and 4 kPa](images/eco50_vs_eco30_meshA_montage.png)
 
 ## Turn radius: how tightly the finger curls
+
+Material (from the SW-5 run): Ecoflex 00-30, fit 0 (Yeoh, Liao et al. 2020), see [Material profiles used](#material-profiles-used).
 
 At higher pressures the base curls into a rough circle. The turn radius measures that circle on the surface that touches objects: the base underside, along the finger's centreline (the half model's symmetry face). Only the chambered length (x = 3–109 mm) is used, so the solid end walls don't distort it. Code: [../stage1_finger/analysis/curvature.py](../stage1_finger/analysis/curvature.py). Every free-bending run now reports it in `results.json` (`turn_radius`) and plots it to `plots/turn_radius*.png`.
 
@@ -240,6 +269,8 @@ Findings:
 - **Average radius is mostly bend angle in mm** (R ≈ arc length / bend). The extra information is the circularity, the curvature profile, and radii that can be compared directly with object sizes.
 
 ## SW-6: blocked tip force (first result)
+
+Material: Ecoflex 00-30, fit 0 (Yeoh, Liao et al. 2020) for the baseline. Variants add Dragon Skin 20, fit 0 (1-term Ogden, library refit of Marechal et al. 2021 data), as base or throughout, see [Material profiles used](#material-profiles-used).
 
 `studies/compare/sw6_blocked_eco30_meshA.toml`: Ecoflex 00-30, mesh A (relative accuracy only, about 8% stiff), half model, contact on. The whole tip face is held in z (the bend direction) but is free to slide along the finger and to rotate, like a fingertip resting on a load cell. The blocked force is the reaction on that face.
 
@@ -276,6 +307,8 @@ Same setup, one change at a time (`studies/compare/sw6_blocked_*.toml`, mesh A, 
 - The material cards put all of these silicones at about $33–39 per trial kit, so cost does not decide between them.
 
 ## Design comparison: base material and chamber height (mesh A)
+
+Material: Ecoflex 00-30, fit 0 (Yeoh, Liao et al. 2020) for the top in all variants and the base except where noted; the Dragon Skin 20 base variant uses Dragon Skin 20, fit 0 (1-term Ogden, library refit of Marechal et al. 2021 data) for the base; the Ecoflex 00-50 row uses Ecoflex 00-50, fit 0 (Yeoh, Liao et al. 2020). See [Material profiles used](#material-profiles-used).
 
 Ecoflex 00-30 baseline, against one change at a time, on mesh A with the same settings (`studies/compare/`). Mesh A reads 3% (at 4 kPa) to 8% (at 1 kPa) stiff against mesh B, so the ratios are what count.
 
