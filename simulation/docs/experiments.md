@@ -357,7 +357,7 @@ Set up the environment and FEBio as described in [../README.md](../README.md). T
 .venv\Scripts\python -m simulation.stage1_finger.run simulation/stage1_finger/studies/eco30_sweep_10kPa.toml --timeout-s 4200
 
 # Redraw the renders of an existing run without re-solving
-.venv\Scripts\python -m simulation.stage1_finger.render simulation/outputs/eco30_sweep_10kPa/<run folder>
+.venv\Scripts\python -m simulation.stage1_finger.render simulation/outputs/finger_baseline_ecoflex30/free_bend_0-5kPa_meshB
 ```
 
 | Experiment | Study file | Approx. time on the machine above |
@@ -372,4 +372,4 @@ Set up the environment and FEBio as described in [../README.md](../README.md). T
 | Design comparison | `studies/compare/cmp_*.toml` | 20–35 min each when sharing the CPU (mesh A, to 4 kPa) |
 | Turn radius, all tables | `python -m simulation.stage1_finger.summarize` (plus `--compare <studies>` for the overlay plot) | seconds |
 
-Each run writes `simulation/outputs/<study>/<UTC timestamp>/`, containing `results.json` (per-pressure metrics), `plots/`, and `renders/`. Look at the renders after every run.
+Each run writes `simulation/outputs/<study>/<UTC timestamp>/`, containing `results.json` (per-pressure metrics), `plots/`, and `renders/`. Look at the renders after every run. Reviewed runs are then moved into topic folders with descriptive names, indexed in `simulation/outputs/README.md`.

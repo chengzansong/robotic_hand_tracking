@@ -42,13 +42,13 @@ From the repo root, with the project's `.venv`:
 .venv\Scripts\python -m pytest control/tests -q
 ```
 
-The demo zeroes the sensor, then steps one finger through curvature targets of 0, 17, 38, 27 and 0 1/m (`--targets` changes them). It prints settle time, overshoot and steady error for each step, in pressure and in curvature, judged on the plant's true values and not the noisy sensor. It saves a plot (pressure, measured pressure, target, curvature, duty) to `control/outputs/demo.png`, which git ignores. `--bleed-mm` changes the plant's bleed only. The controller keeps its belief from `[model]`, so a different size shows how it copes with a wrong leak model. `--identify-leak` first runs a decay test and gives the controller the fitted leak.
+The demo zeroes the sensor, then steps one finger through curvature targets of 0, 17, 38, 27 and 0 1/m (`--targets` changes them). It prints settle time, overshoot and steady error for each step, in pressure and in curvature, judged on the plant's true values and not the noisy sensor. It saves a plot (pressure, measured pressure, target, curvature, duty) to `control/outputs/demo.png`, which git ignores. `--bleed-mm` changes the plant's bleed only. The controller keeps its belief from `[model]`, so a different size shows how it copes with a wrong leak model. `--identify-leak` first runs a decay test and gives the controller the fitted leak. `--gif [path]` also saves an animation: the finger bending beside the pressure and duty traces, labelled with the bleed outflow (default `control/outputs/demo.gif`).
 
 On the default settings, `pi_ff` settles in about 0.7 to 1.4 s per step with under 0.2 kPa overshoot. Releasing to 0 takes about 3 s, because the bleed is the only way out. `bang_bang` ripples by about 0.3 kPa around the target, so it rarely sits inside a tight band.
 
 ## Shape map
 
-`shape/maps/finger_poc_eco30_meshB.json` is the pressure-to-shape table for the `finger_poc` design in Ecoflex 00-30. It comes from the Stage 1 free sweep `simulation/outputs/eco30_sweep_10kPa/20261020T121529Z/results.json`. Control reads only this JSON file and never imports `simulation/`. To make a table for another design or material:
+`shape/maps/finger_poc_eco30_meshB.json` is the pressure-to-shape table for the `finger_poc` design in Ecoflex 00-30. It comes from the Stage 1 free sweep `simulation/outputs/finger_baseline_ecoflex30/free_bend_0-5kPa_meshB/results.json`. Control reads only this JSON file and never imports `simulation/`. To make a table for another design or material:
 
 ```
 .venv\Scripts\python -m control.shape.export_map <results.json> -o control/shape/maps/<name>.json --design <id> --material <id>

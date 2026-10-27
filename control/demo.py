@@ -12,7 +12,10 @@ so a different size tests how well the controller copes with a wrong leak model.
 import argparse
 from pathlib import Path
 
+import numpy as np
+
 from .controllers import build_controller
+from .core import pneumatics as pn
 from .core.config import CONTROL_DIR, load_config
 from .estimators.leak_id import run_decay_experiment
 from .finger import FingerController
@@ -38,6 +41,8 @@ def main(argv=None):
                     help="run a decay test first and give the controller the fitted leak")
     ap.add_argument("--no-plot", action="store_true")
     ap.add_argument("--out", default=str(CONTROL_DIR / "outputs" / "demo.png"))
+    ap.add_argument("--gif", nargs="?", const=str(CONTROL_DIR / "outputs" / "demo.gif"),
+                    help="also save an animation: finger shape beside the pressure trace")
     a = ap.parse_args(argv)
 
     cfg = load_config(a.config)
@@ -88,6 +93,10 @@ def main(argv=None):
 
     if not a.no_plot:
         plot(log, t0, a.out, cfg.controller.type)
+    if a.gif:
+        bleed = lambda P: pn.bleed_flow(plant.bleed_k, cfg.bleed.n, P)
+        animate(log, t0, finger.map, bleed, a.gif, cfg.controller.type,
+                a.bleed_mm or cfg.bleed.diameter_mm)
 
 
 def fmt(m):
@@ -119,6 +128,67 @@ def plot(log, t0, path, title):
     fig.tight_layout()
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=120)
+    plt.close(fig)
+    print(f"saved {path}")
+
+
+def finger_arc(bend_deg, kappa_per_m, n=60):
+    """Points (mm) of the finger's underside as a constant-curvature arc, clamped
+    at the origin pointing along +x and bending toward -z (the palm side)."""
+    theta = np.radians(bend_deg)
+    if kappa_per_m < 1e-3 or theta < 1e-4:
+        return np.linspace(0, 112.0, n), np.zeros(n)
+    R = 1000.0 / kappa_per_m
+    a = np.linspace(0.0, theta, n)
+    return R * np.sin(a), -R * (1 - np.cos(a))
+
+
+def animate(log, t0, shape_map, bleed, path, title, bleed_mm, fps=20, speed=2.0):
+    """Finger shape (left) beside the pressure trace (right), played at `speed`x."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation, PillowWriter
+
+    t = log["t"] - t0
+    frames = np.searchsorted(t, np.arange(0.0, t[-1], speed / fps))
+    fig, (axf, axp) = plt.subplots(1, 2, figsize=(10, 4.2),
+                                   gridspec_kw={"width_ratios": [1, 1.3]})
+    axf.set_xlim(-60, 120)
+    axf.set_ylim(-110, 30)
+    axf.set_aspect("equal")
+    axf.set_xlabel("mm")
+    axf.plot([-8, 0], [0, 0], color="0.3", lw=6)                     # clamp
+    (line,) = axf.plot([], [], color="tab:orange", lw=5, solid_capstyle="round")
+    text = axf.text(-55, -72, "", va="top", fontsize=9, family="monospace")
+    axp.plot(t, log["P_target"], "k--", lw=1, label="P* (from curvature target)")
+    (ptrace,) = axp.plot([], [], color="tab:blue", label="P (true)")
+    (dtrace,) = axp.plot([], [], color="tab:green", lw=0.8, alpha=0.7, label="pump duty x5")
+    axp.set_xlim(0, t[-1])
+    axp.set_ylim(-0.2, 5.2)
+    axp.set_xlabel("time (s)")
+    axp.set_ylabel("pressure (kPa)")
+    axp.grid(alpha=0.3)
+    axp.legend(loc="upper right", fontsize=8)
+    fig.suptitle(f"One finger, {title} control, fixed {bleed_mm:g} mm bleed "
+                 f"(placeholder pump and sensor)", fontsize=10)
+    fig.tight_layout()
+
+    def draw(i):
+        P, k = log["P_true"][i], log["kappa_true"][i]
+        x, z = finger_arc(float(shape_map.bend_deg(P)), k)
+        line.set_data(x, z)
+        state = "pumping" if log["duty"][i] > 0 else "venting"
+        text.set_text(f"t {t[i]:5.1f} s   {state}\nP {P:4.2f} kPa (target {log['P_target'][i]:.2f})\n"
+                      f"curvature {k:4.1f} 1/m (target {log['kappa_target'][i]:.1f})\n"
+                      f"duty {log['duty'][i]:.2f}   bleed out {bleed(P):.1f} ml/s")
+        ptrace.set_data(t[:i + 1], log["P_true"][:i + 1])
+        dtrace.set_data(t[:i + 1], 5 * log["duty"][:i + 1])
+        return line, text, ptrace, dtrace
+
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    FuncAnimation(fig, draw, frames=frames, blit=True).save(path, writer=PillowWriter(fps=fps),
+                                                          dpi=80)
     plt.close(fig)
     print(f"saved {path}")
 

@@ -1,7 +1,7 @@
 {
   "design": "finger_poc",
   "material": "ecoflex_00-30",
-  "source_run": "simulation/outputs/eco30_sweep_10kPa/20261020T121529Z/results.json",
+  "source_run": "simulation/outputs/finger_baseline_ecoflex30/free_bend_0-5kPa_meshB/results.json",
   "study": "eco30_sweep_10kPa",
   "load_case": "free",
   "solver_status": "timeout",

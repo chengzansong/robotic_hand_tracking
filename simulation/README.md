@@ -71,10 +71,10 @@ This includes a one-element FEBio check against the analytic solution.
 .venv\Scripts\python -m simulation.stage1_finger.run simulation/stage1_finger/studies/poc_smoke.toml --timeout-s 1800
 
 # 3. Look at the renders, and redraw them later without re-solving if needed
-.venv\Scripts\python -m simulation.stage1_finger.render simulation/outputs/poc_smoke/<run folder>
+.venv\Scripts\python -m simulation.stage1_finger.render simulation/outputs/finger_baseline_ecoflex30/free_bend_0-5kPa_meshB
 ```
 
-Each run writes to `simulation/outputs/<study>/<UTC timestamp>/`:
+Each run writes to `simulation/outputs/<study>/<UTC timestamp>/`. Reviewed runs are then moved into topic folders with descriptive names, indexed in `simulation/outputs/README.md`. Each run folder contains:
 
 - `results.json`: bend angle, tip position, cavity volume, stretch, wall gaps, and reactions for each pressure level
 - `metadata.json`: the exact material fits, mesh, and solver settings used, plus the git commit
