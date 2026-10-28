@@ -1,7 +1,12 @@
+
 # Python virtual environments
 myvenv/
 .venv/
 venv/
+sofa-venv/
+
+# SOFA installation
+SOFA_v26.06.00_MacOS/
 
 # Python cache
 __pycache__/
