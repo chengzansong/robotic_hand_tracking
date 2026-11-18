@@ -1,10 +1,11 @@
-
+import serial
 import cv2
 import mediapipe as mp
 import numpy as np
 import time
 from pathlib import Path
 from curvature_calculation import finger_curvature
+from send_info import send_info
 
 # ---------- Configuration ----------
 
@@ -14,6 +15,7 @@ BaseOptions = mp.tasks.BaseOptions
 HandLandmarker = mp.tasks.vision.HandLandmarker
 HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 RunningMode = mp.tasks.vision.RunningMode
+
 
 # MediaPipe hand skeleton connections
 CONNECTIONS = [
@@ -99,6 +101,17 @@ def main():
         min_tracking_confidence=0.6
     )
 
+    #ARDUINOOOOOOOO
+    USB_PORT = "/dev/cu.usbmodem11301"
+    arduino = serial.Serial(
+        USB_PORT,  # replace with your actual port
+        115200,
+        timeout=1
+    )
+
+    time.sleep(2)
+    #######################################
+
     cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
@@ -144,6 +157,7 @@ def main():
                     for lm in result.hand_world_landmarks[0]
                 ])
 
+                curvatures_to_send = {}
                 for i, (finger, (a, b, c)) in enumerate(JOINTS.items()):
                     # Original joint angle calculation
                     angle = joint_angle(coords[a], coords[b], coords[c])
@@ -153,6 +167,7 @@ def main():
                     # New curvature calculation
                     finger_points = coords[list(FINGERS[finger])]
                     curvature = finger_curvature(finger_points)
+                    curvatures_to_send[finger] = curvature
 
                     # Display joint angle
                     cv2.putText(
@@ -180,6 +195,8 @@ def main():
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.7, (255, 0, 255), 2
                     )
+                if len(curvatures_to_send) == 5:
+                    send_info(arduino, curvatures_to_send)
             else:
                 cv2.putText(
                     frame, "No hand detected",
@@ -197,6 +214,7 @@ def main():
 
     cap.release()
     cv2.destroyAllWindows()
+    arduino.close()
 
 
 if __name__ == "__main__":
