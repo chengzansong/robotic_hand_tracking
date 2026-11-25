@@ -5,11 +5,11 @@ import numpy as np
 import time
 from pathlib import Path
 from curvature_calculation import finger_curvature
-from send_info import send_info
 
 # ---------- Configuration ----------
 
 MODEL_PATH = str(Path(__file__).with_name("hand_landmarker.task"))
+ECHO_TIMEOUT_S = 0.25
 
 BaseOptions = mp.tasks.BaseOptions
 HandLandmarker = mp.tasks.vision.HandLandmarker
@@ -66,6 +66,39 @@ def joint_angle(a, b, c):
 def normalize_curl(angle):
     return float(np.clip((180 - angle) / 90, 0, 1))
 
+
+class IndexCurvatureEcho:
+    """Poll Arduino echoes without making the camera wait for a reply."""
+
+    def __init__(self, arduino):
+        self.arduino = arduino
+        self.pending = None
+        self.sent_at = 0.0
+        self.partial_reply = b""
+
+    def update(self, curvature):
+        available = self.arduino.in_waiting
+        if available:
+            received = self.partial_reply + self.arduino.read(available)
+            replies = received.split(b"\n")
+            self.partial_reply = replies.pop()
+            if any(reply.rstrip(b"\r") == self.pending for reply in replies):
+                print(f"Arduino: {self.pending.decode('ascii')}")
+                self.pending = None
+
+        now = time.monotonic()
+        if self.pending is not None:
+            if now - self.sent_at < ECHO_TIMEOUT_S:
+                return
+            self.partial_reply = b""
+
+        # Send the current frame's value once the previous exchange is done.
+        value = str(int(round(curvature))).encode("ascii")
+        self.arduino.write(value + b"\n")
+        self.pending = value
+        self.sent_at = now
+
+
 def draw_hand(frame, landmarks):
     """Draw connections and numbered landmarks."""
     h, w = frame.shape[:2]
@@ -105,11 +138,13 @@ def main():
     USB_PORT = "/dev/cu.usbmodem11301"
     arduino = serial.Serial(
         USB_PORT,  # replace with your actual port
-        115200,
-        timeout=1
+        baudrate=115200,
+        timeout=0,
+        write_timeout=0.02,
     )
 
     time.sleep(2)
+    curvature_echo = IndexCurvatureEcho(arduino)
     #######################################
 
     cap = cv2.VideoCapture(0)
@@ -147,6 +182,7 @@ def main():
                 image, timestamp
             )
 
+            index_curvature = 0.0  # Preserve the zero sent when no hand is detected.
             if result.hand_landmarks:
                 landmarks = result.hand_landmarks[0]
                 draw_hand(frame, landmarks)
@@ -157,7 +193,6 @@ def main():
                     for lm in result.hand_world_landmarks[0]
                 ])
 
-                curvatures_to_send = {}
                 for i, (finger, (a, b, c)) in enumerate(JOINTS.items()):
                     # Original joint angle calculation
                     angle = joint_angle(coords[a], coords[b], coords[c])
@@ -167,7 +202,9 @@ def main():
                     # New curvature calculation
                     finger_points = coords[list(FINGERS[finger])]
                     curvature = finger_curvature(finger_points)
-                    curvatures_to_send[finger] = curvature
+
+                    if finger == "Index":
+                        index_curvature = curvature
 
                     # Display joint angle
                     cv2.putText(
@@ -195,8 +232,6 @@ def main():
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.7, (255, 0, 255), 2
                     )
-                if len(curvatures_to_send) == 5:
-                    send_info(arduino, curvatures_to_send)
             else:
                 cv2.putText(
                     frame, "No hand detected",
@@ -205,6 +240,7 @@ def main():
                     0.8, (0, 0, 255), 2
                 )
 
+            curvature_echo.update(index_curvature)
             cv2.imshow("Robotic Hand Tracking", frame)
 
             # Press Q to quit
